@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Equipment List - BEMS{% endblock %}
+
+{% block page_title %}Equipment Management{% endblock %}
+{% block page_description %}View, search, and manage all biomedical equipment{% endblock %}
+
+{% block content %}
+
+<!-- Search and Filters Card -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🔍 Search & Filters</h3>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="/equipment_list">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+                <input type="text" name="search" placeholder="Search by name, model, company, or serial..." 
+                       value="{{ search }}" class="form-control" style="flex: 2;">
+                <button type="submit" class="btn btn-primary">🔍 Search</button>
+                {% if search or department or status_filter %}
+                    <a href="/equipment_list" class="btn btn-secondary">Clear All</a>
+                {% endif %}
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <select name="department" class="form-control" style="width: 200px;">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept }}" {% if department == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+                <select name="status" class="form-control" style="width: 150px;">
+                    <option value="">All Status</option>
+                    <option value="Working" {% if status_filter == "Working" %}selected{% endif %}>Working</option>
+                    <option value="Under Repair" {% if status_filter == "Under Repair" %}selected{% endif %}>Under Repair</option>
+                    <option value="Scrap" {% if status_filter == "Scrap" %}selected{% endif %}>Scrap</option>
+                </select>
+                <button type="submit" class="btn btn-secondary">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Export Buttons and Results Count -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+    <div class="results-info">
+        <span style="background: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 13px;">
+            {{ equipments|length }} equipment item{% if equipments|length != 1 %}s{% endif %}
+        </span>
+    </div>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="/export/csv" class="btn btn-secondary btn-sm">📄 Export CSV</a>
+        <a href="/export/excel" class="btn btn-secondary btn-sm">📊 Export Excel</a>
+        <a href="/export/pdf/equipment" class="btn btn-secondary btn-sm">📑 Export PDF</a>
+    </div>
+</div>
+
+<!-- Equipment Table -->
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Model</th>
+                <th>Company</th>
+                <th>Serial</th>
+                <th>Qty</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </thead>
+        <tbody>
+            {% for eq in equipments %}
+            <tr class="clickable-row" data-href="/equipment/{{ eq.id }}">
+                <td style="font-weight: 600;">{{ eq.id }}</td>
+                <td>
+                    <strong>{{ eq.name }}</strong>
+                    {% if eq.quantity and eq.quantity > 1 %}
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 10px; margin-left: 6px;">
+                            {{ eq.quantity }} units
+                        </span>
+                    {% endif %}
+                </td>
+                <td>{{ eq.model_no or '-' }}</td>
+                <td>{{ eq.company or '-' }}</td>
+                <td>
+                    {% if eq.serial_no %}
+                        <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 12px;">{{ eq.serial_no }}</code>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if eq.quantity and eq.quantity > 1 %}
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary);">{{ eq.quantity }}</span>
+                    {% else %}
+                        1
+                    {% endif %}
+                </td>
+                <td>
+                    {% if eq.department_obj %}
+                        <span class="badge" style="background: var(--bg-tertiary);">{{ eq.department_obj.name }}</span>
+                    {% elif eq.department_name %}
+                        <span class="badge" style="background: var(--bg-tertiary);">{{ eq.department_name }}</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ eq.status.lower().replace(' ', '-') }}">
+                        {{ eq.status }}
+                    </span>
+                </td>
+                <td style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <a href="/equipment/{{ eq.id }}" class="btn btn-sm btn-secondary" title="View Details">
+                        👁️
+                    </a>
+                    <a href="/edit/{{ eq.id }}" class="btn btn-sm btn-secondary" title="Edit">
+                        ✏️
+                    </a>
+                    {% if session.get('role') == 'admin' %}
+                        <a href="/equipment/{{ eq.id }}/delete" 
+                           class="btn btn-sm btn-danger" 
+                           title="Delete"
+                           onclick="return confirmDelete('{{ eq.name }}', {{ eq.id }})">
+                            🗑️
+                        </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>No equipment found.</p>
+                    <a href="/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">➕ Add Equipment</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination (if needed) -->
+{% if equipments|length > 0 %}
+<div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+    <div style="display: flex; gap: 8px;">
+        <span class="badge" style="background: var(--bg-tertiary);">
+            Showing {{ equipments|length }} items
+        </span>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // Make entire row clickable
+    document.querySelectorAll('.clickable-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (e.target.tagName === 'A' || e.target.closest('.btn')) {
+                return;
+            }
+            const href = this.getAttribute('data-href');
+            if (href) {
+                window.location.href = href;
+            }
+        });
+        
+        // Add cursor pointer style
+        row.style.cursor = 'pointer';
+    });
+    
+    // Confirm delete function
+    function confirmDelete(equipmentName, equipmentId) {
+        return confirm(`⚠️ WARNING: Are you sure you want to delete "${equipmentName}"?\n\nThis will also delete:\n- All repair records for this equipment\n- All tasks linked to this equipment\n- All PM schedules for this equipment\n\nThis action cannot be undone!`);
+    }
+    
+    // Add hover effect to table rows
+    document.querySelectorAll('.data-table tbody tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'var(--bg-tertiary)';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = 'transparent';
+        });
+    });
+    
+    // Auto-submit filters on dropdown change (optional)
+    // Uncomment if you want instant filtering
+    /*
+    document.querySelectorAll('select[name="department"], select[name="status"]').forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
+    */
+</script>
+
+{% endblock %}

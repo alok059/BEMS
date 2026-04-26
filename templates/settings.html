@@ -1,0 +1,687 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - BEMS{% endblock %}
+
+{% block page_title %}Settings{% endblock %}
+{% block page_description %}Customize your BEMS experience and system preferences{% endblock %}
+
+{% block content %}
+
+<!-- Appearance Settings -->
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">🎨 Appearance</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Dark Mode</div>
+                <div class="settings-description">Switch between light and dark theme for comfortable viewing</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="darkModeToggle" onchange="toggleThemeSetting()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Compact Sidebar</div>
+                <div class="settings-description">Collapse sidebar to show only icons for more screen space</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="compactSidebarToggle" onchange="toggleSidebarCompact()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Animations</div>
+                <div class="settings-description">Enable smooth animations and transitions throughout the app</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="animationsToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- Display Settings -->
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">📊 Display Settings</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Items per page</div>
+                <div class="settings-description">Number of items shown in tables and lists</div>
+            </div>
+            <select id="itemsPerPage" class="form-control" style="width: 100px;">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Date Format</div>
+                <div class="settings-description">How dates are displayed throughout the system</div>
+            </div>
+            <select id="dateFormat" class="form-control" style="width: 150px;">
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+            </select>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Default Dashboard View</div>
+                <div class="settings-description">Which dashboard view to show by default</div>
+            </div>
+            <select id="defaultView" class="form-control" style="width: 150px;">
+                <option value="dashboard">Main Dashboard</option>
+                <option value="equipment">Equipment List</option>
+                <option value="tasks">Task Manager</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Settings -->
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">🔔 Notification Settings</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Browser Notifications</div>
+                <div class="settings-description">Show desktop notifications for due tasks and overdue PMs</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="browserNotifications" onchange="requestNotificationPermission()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Email Notifications</div>
+                <div class="settings-description">Receive email alerts for upcoming maintenance and tasks</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="emailNotifications">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Task Reminders</div>
+                <div class="settings-description">Get notified about tasks due today</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="taskReminders" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">PM Due Alerts</div>
+                <div class="settings-description">Get notified when preventive maintenance is due</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="pmAlerts" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- Data Management -->
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">🔄 Data Management</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Auto Backup</div>
+                <div class="settings-description">Automatically backup database daily at 2:00 AM</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoBackup" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Backup Retention</div>
+                <div class="settings-description">How many days to keep old backups</div>
+            </div>
+            <select id="backupRetention" class="form-control" style="width: 100px;">
+                <option value="7">7 days</option>
+                <option value="30" selected>30 days</option>
+                <option value="60">60 days</option>
+                <option value="90">90 days</option>
+            </select>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Auto Cleanup</div>
+                <div class="settings-description">Automatically delete old data (completed tasks, old repairs)</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoCleanup">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- Security Settings (Admin Only) -->
+{% if session.get('role') == 'admin' %}
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">🔒 Security Settings</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Session Timeout</div>
+                <div class="settings-description">Auto logout after inactivity (minutes)</div>
+            </div>
+            <select id="sessionTimeout" class="form-control" style="width: 100px;">
+                <option value="30">30 minutes</option>
+                <option value="60" selected>60 minutes</option>
+                <option value="120">2 hours</option>
+                <option value="480">8 hours</option>
+            </select>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Login Attempts</div>
+                <div class="settings-description">Maximum failed login attempts before lockout</div>
+            </div>
+            <select id="maxLoginAttempts" class="form-control" style="width: 100px;">
+                <option value="3">3 attempts</option>
+                <option value="5" selected>5 attempts</option>
+                <option value="10">10 attempts</option>
+            </select>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Password Policy</div>
+                <div class="settings-description">Require strong passwords (min 8 chars, mixed case, numbers)</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="strongPassword">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- System Information -->
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">ℹ️ System Information</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Version</div>
+                <div class="settings-description">Biomedical Equipment Management System</div>
+            </div>
+            <div><strong>v2.0.0</strong></div>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Database Size</div>
+                <div class="settings-description">Current database file size</div>
+            </div>
+            <div><strong>{{ db_size_mb or 0 }} MB</strong></div>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Last Backup</div>
+                <div class="settings-description">Most recent automatic or manual backup</div>
+            </div>
+            <div><strong>{{ last_backup or 'Never' }}</strong></div>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Total Backups</div>
+                <div class="settings-description">Number of backup files stored</div>
+            </div>
+            <div><strong>{{ total_backups or 0 }}</strong></div>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Total Equipment</div>
+                <div class="settings-description">Number of equipment records</div>
+            </div>
+            <div><strong>{{ total_equipment or 0 }}</strong></div>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Total Users</div>
+                <div class="settings-description">Registered system users</div>
+            </div>
+            <div><strong>{{ total_users or 0 }}</strong></div>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Storage Location</div>
+                <div class="settings-description">Where your data is stored</div>
+            </div>
+            <div><code style="font-size: 11px;">{{ storage_path or 'C:\\Users\\...\\bems_final\\' }}</code></div>
+        </div>
+    </div>
+</div>
+
+<!-- Danger Zone (Admin Only) -->
+{% if session.get('role') == 'admin' %}
+<div class="settings-section">
+    <div class="settings-card" style="border-color: var(--danger);">
+        <div class="card-header" style="border-bottom-color: var(--danger);">
+            <h3 class="card-title" style="color: var(--danger);">⚠️ Danger Zone</h3>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Clear All Data</div>
+                <div class="settings-description">Permanently delete all equipment, tasks, and repairs</div>
+            </div>
+            <button onclick="clearAllData()" class="btn btn-danger" style="background: var(--danger);">
+                🗑️ Clear All Data
+            </button>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Reset System</div>
+                <div class="settings-description">Reset to factory settings (keeps admin user)</div>
+            </div>
+            <button onclick="resetSystem()" class="btn btn-warning" style="background: var(--warning); color: black;">
+                🔄 Reset System
+            </button>
+        </div>
+        
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Export All Data</div>
+                <div class="settings-description">Export complete system data for backup</div>
+            </div>
+            <a href="/export/all" class="btn btn-secondary">📦 Export All Data</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // Load saved settings from localStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        // Dark mode
+        const darkMode = localStorage.getItem('theme') === 'dark';
+        document.getElementById('darkModeToggle').checked = darkMode;
+        
+        // Compact sidebar
+        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        document.getElementById('compactSidebarToggle').checked = sidebarCollapsed;
+        
+        // Animations
+        const animations = localStorage.getItem('animations') !== 'false';
+        document.getElementById('animationsToggle').checked = animations;
+        
+        // Items per page
+        const itemsPerPage = localStorage.getItem('itemsPerPage') || '25';
+        document.getElementById('itemsPerPage').value = itemsPerPage;
+        
+        // Date format
+        const dateFormat = localStorage.getItem('dateFormat') || 'YYYY-MM-DD';
+        document.getElementById('dateFormat').value = dateFormat;
+        
+        // Default view
+        const defaultView = localStorage.getItem('defaultView') || 'dashboard';
+        document.getElementById('defaultView').value = defaultView;
+        
+        // Browser notifications
+        const browserNotifications = localStorage.getItem('browserNotifications') === 'true';
+        document.getElementById('browserNotifications').checked = browserNotifications;
+        
+        // Email notifications
+        const emailNotifications = localStorage.getItem('emailNotifications') === 'true';
+        document.getElementById('emailNotifications').checked = emailNotifications;
+        
+        // Task reminders
+        const taskReminders = localStorage.getItem('taskReminders') !== 'false';
+        document.getElementById('taskReminders').checked = taskReminders;
+        
+        // PM alerts
+        const pmAlerts = localStorage.getItem('pmAlerts') !== 'false';
+        document.getElementById('pmAlerts').checked = pmAlerts;
+        
+        // Auto backup
+        const autoBackup = localStorage.getItem('autoBackup') !== 'false';
+        document.getElementById('autoBackup').checked = autoBackup;
+        
+        // Backup retention
+        const backupRetention = localStorage.getItem('backupRetention') || '30';
+        document.getElementById('backupRetention').value = backupRetention;
+        
+        // Auto cleanup
+        const autoCleanup = localStorage.getItem('autoCleanup') === 'true';
+        document.getElementById('autoCleanup').checked = autoCleanup;
+        
+        {% if session.get('role') == 'admin' %}
+        // Session timeout
+        const sessionTimeout = localStorage.getItem('sessionTimeout') || '60';
+        document.getElementById('sessionTimeout').value = sessionTimeout;
+        
+        // Max login attempts
+        const maxLoginAttempts = localStorage.getItem('maxLoginAttempts') || '5';
+        document.getElementById('maxLoginAttempts').value = maxLoginAttempts;
+        
+        // Strong password
+        const strongPassword = localStorage.getItem('strongPassword') === 'true';
+        document.getElementById('strongPassword').checked = strongPassword;
+        {% endif %}
+    });
+    
+    // Save settings when changed
+    document.getElementById('itemsPerPage').addEventListener('change', function() {
+        localStorage.setItem('itemsPerPage', this.value);
+        showToast('Items per page updated', 'success');
+    });
+    
+    document.getElementById('dateFormat').addEventListener('change', function() {
+        localStorage.setItem('dateFormat', this.value);
+        showToast('Date format updated', 'success');
+    });
+    
+    document.getElementById('defaultView').addEventListener('change', function() {
+        localStorage.setItem('defaultView', this.value);
+        showToast('Default view updated', 'success');
+    });
+    
+    document.getElementById('emailNotifications').addEventListener('change', function() {
+        localStorage.setItem('emailNotifications', this.checked);
+        showToast(this.checked ? 'Email notifications enabled' : 'Email notifications disabled', 'info');
+    });
+    
+    document.getElementById('taskReminders').addEventListener('change', function() {
+        localStorage.setItem('taskReminders', this.checked);
+    });
+    
+    document.getElementById('pmAlerts').addEventListener('change', function() {
+        localStorage.setItem('pmAlerts', this.checked);
+    });
+    
+    document.getElementById('autoBackup').addEventListener('change', function() {
+        localStorage.setItem('autoBackup', this.checked);
+        showToast(this.checked ? 'Auto backup enabled' : 'Auto backup disabled', 'info');
+    });
+    
+    document.getElementById('backupRetention').addEventListener('change', function() {
+        localStorage.setItem('backupRetention', this.value);
+        showToast('Backup retention updated to ' + this.value + ' days', 'success');
+    });
+    
+    document.getElementById('autoCleanup').addEventListener('change', function() {
+        localStorage.setItem('autoCleanup', this.checked);
+    });
+    
+    document.getElementById('animationsToggle').addEventListener('change', function() {
+        localStorage.setItem('animations', this.checked);
+        if (!this.checked) {
+            document.body.style.animation = 'none';
+        } else {
+            document.body.style.animation = '';
+        }
+        showToast(this.checked ? 'Animations enabled' : 'Animations disabled', 'info');
+    });
+    
+    {% if session.get('role') == 'admin' %}
+    document.getElementById('sessionTimeout').addEventListener('change', function() {
+        localStorage.setItem('sessionTimeout', this.value);
+        showToast('Session timeout updated to ' + this.value + ' minutes', 'success');
+    });
+    
+    document.getElementById('maxLoginAttempts').addEventListener('change', function() {
+        localStorage.setItem('maxLoginAttempts', this.value);
+        showToast('Max login attempts updated', 'success');
+    });
+    
+    document.getElementById('strongPassword').addEventListener('change', function() {
+        localStorage.setItem('strongPassword', this.checked);
+        showToast(this.checked ? 'Strong password policy enabled' : 'Strong password policy disabled', 'info');
+    });
+    {% endif %}
+    
+    // Theme toggle function
+    function toggleThemeSetting() {
+        const isChecked = document.getElementById('darkModeToggle').checked;
+        const html = document.documentElement;
+        const newTheme = isChecked ? 'dark' : 'light';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        const themeBtn = document.getElementById('themeToggle');
+        if (themeBtn) {
+            themeBtn.innerHTML = newTheme === 'light' ? '🌙' : '☀️';
+        }
+        
+        showToast(isChecked ? 'Dark mode enabled' : 'Light mode enabled', 'success');
+    }
+    
+    // Sidebar compact toggle
+    function toggleSidebarCompact() {
+        const isChecked = document.getElementById('compactSidebarToggle').checked;
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (isChecked) {
+            sidebar.classList.add('collapsed');
+            mainContent.classList.add('expanded');
+        } else {
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.remove('expanded');
+        }
+        
+        localStorage.setItem('sidebarCollapsed', isChecked);
+        showToast(isChecked ? 'Sidebar compacted' : 'Sidebar expanded', 'info');
+    }
+    
+    // Request notification permission
+    function requestNotificationPermission() {
+        const isChecked = document.getElementById('browserNotifications').checked;
+        
+        if (isChecked && 'Notification' in window) {
+            Notification.requestPermission().then(function(permission) {
+                if (permission === 'granted') {
+                    localStorage.setItem('browserNotifications', 'true');
+                    showToast('Notifications enabled!', 'success');
+                    new Notification('BEMS Notifications Enabled', {
+                        body: 'You will now receive notifications for due tasks and PMs',
+                        icon: '/static/favicon.ico'
+                    });
+                } else {
+                    document.getElementById('browserNotifications').checked = false;
+                    localStorage.setItem('browserNotifications', 'false');
+                    showToast('Notification permission denied', 'error');
+                }
+            });
+        } else {
+            localStorage.setItem('browserNotifications', 'false');
+            showToast('Notifications disabled', 'info');
+        }
+    }
+    
+    // Danger zone functions (admin only)
+    function clearAllData() {
+        if (confirm('⚠️ WARNING: This will permanently delete ALL equipment, tasks, repairs, and PM schedules!\n\nThis action cannot be undone!\n\nAre you absolutely sure?')) {
+            if (confirm('FINAL WARNING: Type "DELETE" to confirm')) {
+                const userInput = prompt('Type "DELETE" to confirm:');
+                if (userInput === 'DELETE') {
+                    window.location.href = '/admin/clear-all-data';
+                }
+            }
+        }
+    }
+    
+    function resetSystem() {
+        if (confirm('⚠️ Reset to factory settings?\n\nThis will:\n- Delete all equipment\n- Delete all tasks\n- Delete all repairs\n- Keep admin user\n- Keep departments\n\nThis cannot be undone!\n\nProceed?')) {
+            if (confirm('Last chance! Reset system?')) {
+                window.location.href = '/admin/reset-system';
+            }
+        }
+    }
+    
+    // Toast notification
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.backgroundColor = type === 'success' ? 'var(--success)' : (type === 'error' ? 'var(--danger)' : 'var(--info)');
+        toast.style.color = 'white';
+        toast.style.padding = '12px 20px';
+        toast.style.borderRadius = '10px';
+        toast.style.zIndex = '1000';
+        toast.style.animation = 'fadeInUp 0.3s ease';
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+</script>
+
+<style>
+    .settings-section {
+        margin-bottom: 24px;
+    }
+    
+    .settings-card {
+        background: var(--bg-secondary);
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+    
+    .settings-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .settings-item:last-child {
+        border-bottom: none;
+    }
+    
+    .settings-label {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .settings-description {
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+    
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--border-color);
+        transition: 0.3s;
+        border-radius: 34px;
+    }
+    
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+        background-color: var(--primary);
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .settings-item {
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+    }
+</style>
+
+{% endblock %}

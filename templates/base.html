@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>{% block title %}BEMS - Biomedical Equipment Management System{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Menu Button (Three Dots) -->
+<button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">
+    ⋮
+</button>
+
+<!-- Sidebar Overlay (closes when clicked outside) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo">
+            <span class="logo-icon">🏥</span>
+            <span class="logo-text">BEMS</span>
+        </div>
+        <button class="sidebar-close-btn" onclick="closeSidebar()">
+            ✕
+        </button>
+    </div>
+    
+    <nav class="sidebar-nav">
+        <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+            Dashboard
+        </a>
+        <a href="/equipment_list" class="nav-item {% if request.endpoint == 'equipment_list' %}active{% endif %}">
+            Equipment
+        </a>
+        <a href="/add" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
+            Add Equipment
+        </a>
+        <a href="/departments" class="nav-item {% if request.endpoint == 'departments' %}active{% endif %}">
+            Departments
+        </a>
+        <a href="/tasks" class="nav-item {% if request.endpoint == 'tasks' %}active{% endif %}">
+            Tasks
+        </a>
+        <a href="/pm" class="nav-item {% if request.endpoint == 'pm_scheduler' %}active{% endif %}">
+            PM Scheduler
+        </a>
+        <a href="/import" class="nav-item {% if request.endpoint == 'import_data' %}active{% endif %}">
+            Import/Export
+        </a>
+        <a href="/backup/manage" class="nav-item {% if request.endpoint == 'manage_backups' %}active{% endif %}">
+            Backup
+        </a>
+        {% if session.get('role') == 'admin' %}
+            <a href="/users" class="nav-item {% if request.endpoint == 'user_management' %}active{% endif %}">
+                Users
+            </a>
+        {% endif %}
+        <a href="/settings" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+            Settings
+        </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session['user'][0]|upper if session.get('user') else 'U' }}</div>
+            <div class="user-details">
+                <div class="user-name">{{ session.get('user', 'Guest') }}</div>
+                <div class="user-role">{{ session.get('role', 'guest') }}</div>
+            </div>
+        </div>
+        <a href="/logout" class="logout-btn">
+            Logout
+        </a>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content" id="mainContent">
+    
+    <!-- Top Navigation -->
+    <div class="top-nav">
+        <div class="page-title">
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            <p>{% block page_description %}Welcome to your Biomedical Equipment Management System{% endblock %}</p>
+        </div>
+        <div class="top-nav-actions">
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+                🌙
+            </button>
+            {% if pending_notifications is defined and pending_notifications > 0 %}
+            <div class="notification-badge" style="position: relative; cursor: pointer;" onclick="window.location='/tasks'">
+                🔔
+                <span style="position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center;">
+                    {{ pending_notifications }}
+                </span>
+            </div>
+            {% else %}
+            <div class="notification-badge" style="cursor: pointer;" onclick="window.location='/tasks'">
+                🔔
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Content Area -->
+    <div class="content-area">
+        {% block content %}{% endblock %}
+    </div>
+    
+</main>
+
+<script>
+    // Sidebar Toggle Function
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+    
+    // Close Sidebar Function
+    function closeSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    }
+    
+    // Theme Toggle Function
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        const themeBtn = document.getElementById('themeToggle');
+        themeBtn.innerHTML = newTheme === 'light' ? '🌙' : '☀️';
+    }
+    
+    // Close sidebar with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
+    });
+    
+    // Load saved preferences on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load theme preference
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        const themeBtn = document.getElementById('themeToggle');
+        if (themeBtn) {
+            themeBtn.innerHTML = savedTheme === 'light' ? '🌙' : '☀️';
+        }
+        
+        // Set active nav link based on current URL
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.nav-item');
+        
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href === currentPath) {
+                link.classList.add('active');
+            } else if (currentPath.startsWith('/equipment/') && href === '/equipment_list') {
+                link.classList.add('active');
+            } else if (currentPath.startsWith('/edit/') && href === '/equipment_list') {
+                link.classList.add('active');
+            } else if (currentPath.startsWith('/departments/') && href === '/departments') {
+                link.classList.add('active');
+            }
+        });
+    });
+    
+    // Optional: Request notification permission
+    function requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+    }
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,2 @@
+to add in bems : live search, cmd auto exit, add-equipment in equipment tab.
+reportlab 

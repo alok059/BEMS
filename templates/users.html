@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - BEMS{% endblock %}
+
+{% block page_title %}User Management{% endblock %}
+{% block page_description %}Manage system users, roles, and access permissions (Admin only){% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-number">{{ users|length }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">👑</div>
+        <div class="stat-number">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</div>
+        <div class="stat-label">Administrators</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🔧</div>
+        <div class="stat-number">{{ users|selectattr('role', 'equalto', 'biomed')|list|length }}</div>
+        <div class="stat-label">Biomed Engineers</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-number">{{ users|selectattr('is_active', 'equalto', true)|list|length }}</div>
+        <div class="stat-label">Active Users</div>
+    </div>
+</div>
+
+<!-- Add User Form -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">➕ Add New User</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/users/add" id="addUserForm">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Username *</label>
+                    <input type="text" name="username" class="form-control" 
+                           placeholder="e.g., johndoe" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" 
+                           placeholder="user@hospital.com">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Password *</label>
+                    <input type="password" name="password" class="form-control" 
+                           placeholder="********" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Role</label>
+                    <select name="role" class="form-control">
+                        <option value="biomed">🔧 Biomed Engineer</option>
+                        <option value="admin">👑 Administrator</option>
+                        <option value="nurse">🏥 Nurse</option>
+                        <option value="technician">🔧 Technician</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">➕ Add User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📋 System Users</h3>
+        <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+            {{ users|length }} total users
+        </span>
+    </div>
+    <div class="card-body">
+        {% if users %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td style="font-weight: 600;">{{ user.id }}</td>
+                                <td>
+                                    <strong>{{ user.username }}</strong>
+                                    {% if user.id == session.get('user_id') %}
+                                        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 10px; margin-left: 6px;">
+                                            You
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.email or '-' }}</td>
+                                <td>
+                                    {% if user.role == 'admin' %}
+                                        <span class="badge" style="background: #dc2626; color: white;">👑 Admin</span>
+                                    {% elif user.role == 'biomed' %}
+                                        <span class="badge" style="background: #3b82f6; color: white;">🔧 Biomed</span>
+                                    {% elif user.role == 'nurse' %}
+                                        <span class="badge" style="background: #10b981; color: white;">🏥 Nurse</span>
+                                    {% else %}
+                                        <span class="badge" style="background: #6b7280; color: white;">🔧 Technician</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge badge-working">✅ Active</span>
+                                    {% else %}
+                                        <span class="badge badge-scrap">⛔ Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size: 12px;">{{ user.last_login or 'Never' }}</td>
+                                <td style="font-size: 12px;">{{ user.created_at[:10] if user.created_at else '-' }}</td>
+                                <td style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    {% if user.id != session.get('user_id') %}
+                                        <button class="btn btn-sm btn-secondary" 
+                                                onclick="resetPassword({{ user.id }}, '{{ user.username }}')"
+                                                title="Reset Password">
+                                            🔑 Reset PW
+                                        </button>
+                                        <button class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}" 
+                                                onclick="toggleUser({{ user.id }}, '{{ user.username }}', {{ user.is_active|lower }})"
+                                                title="{% if user.is_active %}Disable{% else %}Enable{% endif %} User">
+                                            {% if user.is_active %}🔴 Disable{% else %}🟢 Enable{% endif %}
+                                        </button>
+                                    {% endif %}
+                                    {% if user.id != session.get('user_id') and user.role != 'admin' %}
+                                        <button class="btn btn-sm btn-danger" 
+                                                onclick="deleteUser({{ user.id }}, '{{ user.username }}')"
+                                                title="Delete User">
+                                            🗑️ Delete
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <p>No users found. Add your first user above!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Admin Password Reset Section -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">🔐 Admin Password Reset</h3>
+        </div>
+        <div class="card-body">
+            <p style="margin-bottom: 16px; color: var(--text-muted);">
+                Reset any user's password if they forgot it. The user will receive a temporary password.
+            </p>
+            <form method="POST" action="/users/admin-reset-password" id="adminResetForm">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Select User</label>
+                        <select name="user_id" class="form-control" required>
+                            <option value="">-- Select User --</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }} ({{ user.role }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" 
+                               placeholder="Enter new password" required>
+                    </div>
+                    <div class="form-actions" style="margin-bottom: 0; align-self: flex-end;">
+                        <button type="submit" class="btn btn-warning">🔄 Reset Password</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Roles Explanation -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">📚 User Roles & Permissions</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">👑</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Administrator</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Full system access: Manage users, backups, settings, delete equipment, all CRUD operations
+                    </div>
+                </div>
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">🔧</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Biomed Engineer</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Equipment management, repair tracking, task management, PM scheduling, view reports
+                    </div>
+                </div>
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">🏥</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Nurse</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        View equipment, report issues, view tasks (read-only for most features)
+                    </div>
+                </div>
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">🔧</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Technician</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Limited access: View equipment, complete assigned tasks, add repair records
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle user active status
+        function toggleUser(userId, username, isActive) {
+            const action = isActive ? 'disable' : 'enable';
+            const message = `Are you sure you want to ${action} user "${username}"?\n\n${action === 'disable' ? 'This user will not be able to login until re-enabled.' : 'This user will regain access to the system.'}`;
+            
+            if (confirm(message)) {
+                window.location.href = `/users/${userId}/toggle`;
+            }
+        }
+        
+        // Reset user password
+        function resetPassword(userId, username) {
+            const newPassword = prompt(`Reset password for "${username}"?\n\nEnter new password (leave blank for random password):`);
+            
+            if (newPassword !== null) {
+                if (newPassword === '') {
+                    // Generate random password
+                    const randomPass = Math.random().toString(36).slice(-8);
+                    if (confirm(`Set random password for "${username}"?\n\nNew password: ${randomPass}\n\nMake sure to share this with the user.`)) {
+                        window.location.href = `/users/${userId}/reset-password?password=${encodeURIComponent(randomPass)}`;
+                    }
+                } else if (newPassword.length >= 4) {
+                    if (confirm(`Set password for "${username}"?\n\nNew password: ${newPassword}\n\nMake sure to share this with the user.`)) {
+                        window.location.href = `/users/${userId}/reset-password?password=${encodeURIComponent(newPassword)}`;
+                    }
+                } else {
+                    alert('Password must be at least 4 characters long.');
+                }
+            }
+        }
+        
+        // Delete user
+        function deleteUser(userId, username) {
+            if (confirm(`⚠️ WARNING: Are you sure you want to delete user "${username}"?\n\nThis action cannot be undone. The user will be permanently removed from the system.`)) {
+                if (confirm(`Last chance! Delete "${username}" permanently?`)) {
+                    window.location.href = `/users/${userId}/delete`;
+                }
+            }
+        }
+        
+        // Validate new user form
+        document.getElementById('addUserForm')?.addEventListener('submit', function(e) {
+            const username = this.querySelector('input[name="username"]').value.trim();
+            const password = this.querySelector('input[name="password"]').value;
+            
+            if (username.length < 3) {
+                e.preventDefault();
+                alert('Username must be at least 3 characters long.');
+                return false;
+            }
+            
+            if (password.length < 4) {
+                e.preventDefault();
+                alert('Password must be at least 4 characters long.');
+                return false;
+            }
+            
+            // Optional: Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Adding User...';
+            
+            return true;
+        });
+        
+        // Validate admin reset form
+        document.getElementById('adminResetForm')?.addEventListener('submit', function(e) {
+            const password = this.querySelector('input[name="new_password"]').value;
+            
+            if (password.length < 4) {
+                e.preventDefault();
+                alert('Password must be at least 4 characters long.');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Add hover effect to table rows
+        document.querySelectorAll('.data-table tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--bg-tertiary)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'transparent';
+            });
+        });
+        
+        // Highlight current user row
+        const currentUserId = {{ session.get('user_id', 0) }};
+        document.querySelectorAll('.data-table tbody tr').forEach(row => {
+            const firstCell = row.querySelector('td:first-child');
+            if (firstCell && parseInt(firstCell.innerText) === currentUserId) {
+                row.style.backgroundColor = 'var(--primary-light)';
+                row.style.borderLeft = `3px solid var(--primary)`;
+            }
+        });
+    </script>
+
+    <style>
+        .btn-warning {
+            background: var(--warning);
+            color: black;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .badge-working {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-scrap {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        [data-theme="dark"] .badge-working {
+            background: #064e3b;
+            color: #6ee7b7;
+        }
+        
+        [data-theme="dark"] .badge-scrap {
+            background: #7f1a1a;
+            color: #fecaca;
+        }
+    </style>
+
+    {% endblock %}

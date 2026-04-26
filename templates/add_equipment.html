@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Add Equipment - BEMS{% endblock %}
+
+{% block page_title %}Add New Equipment{% endblock %}
+{% block page_description %}Enter the details of the biomedical equipment{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" id="equipmentForm">
+            <div class="form-grid">
+                <!-- Equipment Name -->
+                <div class="form-group">
+                    <label class="form-label">Equipment Name *</label>
+                    <input type="text" name="name" class="form-control" 
+                           placeholder="e.g., Ventilator, ECG Machine, Infusion Pump" 
+                           required autofocus>
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Required field
+                    </small>
+                </div>
+                
+                <!-- Model Number -->
+                <div class="form-group">
+                    <label class="form-label">Model Number</label>
+                    <input type="text" name="model_no" class="form-control" 
+                           placeholder="e.g., V100, ECG-2000, IP-3000">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Optional - Manufacturer's model number
+                    </small>
+                </div>
+                
+                <!-- Company / Manufacturer -->
+                <div class="form-group">
+                    <label class="form-label">Company / Manufacturer</label>
+                    <input type="text" name="company" class="form-control" 
+                           placeholder="e.g., Philips, GE Healthcare, Baxter">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Optional - Manufacturer name
+                    </small>
+                </div>
+                
+                <!-- Serial Number -->
+                <div class="form-group">
+                    <label class="form-label">Serial Number</label>
+                    <input type="text" name="serial_no" class="form-control" 
+                           placeholder="Unique serial number">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Optional - Leave blank for bulk items
+                    </small>
+                </div>
+                
+                <!-- Quantity -->
+                <div class="form-group">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" name="quantity" value="1" min="1" 
+                           class="form-control" id="quantityInput">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Use 1 for individual equipment, or more for bulk items (e.g., 10 oxygen regulators)
+                    </small>
+                </div>
+                
+                <!-- Department Selection -->
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <select name="department_id" class="form-control" id="departmentSelect">
+                        <option value="">-- Select Existing Department --</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 8px;">
+                        Or enter new department below
+                    </small>
+                    <input type="text" name="new_department" class="form-control" 
+                           placeholder="Or enter new department name" id="newDepartmentInput"
+                           style="margin-top: 8px;">
+                </div>
+                
+                <!-- Status -->
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="Working">✅ Working</option>
+                        <option value="Under Repair">🔧 Under Repair</option>
+                        <option value="Scrap">🗑️ Scrap</option>
+                    </select>
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Current operational status
+                    </small>
+                </div>
+                
+                <!-- Installation Date -->
+                <div class="form-group">
+                    <label class="form-label">Installation Date</label>
+                    <input type="date" name="install_date" class="form-control">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Date equipment was installed/commissioned
+                    </small>
+                </div>
+                
+                <!-- Warranty Expiry Date -->
+                <div class="form-group">
+                    <label class="form-label">Warranty Expiry Date</label>
+                    <input type="date" name="warranty_date" class="form-control">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Warranty expiration date
+                    </small>
+                </div>
+                
+                <!-- Last Service Date -->
+                <div class="form-group">
+                    <label class="form-label">Last Service Date</label>
+                    <input type="date" name="last_service" class="form-control">
+                    <small class="form-text" style="color: var(--text-muted); font-size: 12px;">
+                        Date of last maintenance/service
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    💾 Save Equipment
+                </button>
+                <a href="/equipment_list" class="btn btn-secondary">Cancel</a>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                    🔄 Reset Form
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quick Tips Card -->
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">💡 Quick Tips</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+            <div>
+                <strong style="color: var(--primary);">📋 Individual Equipment</strong>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                    For equipment with unique serial numbers (ventilators, monitors, etc.)<br>
+                    Set Quantity = 1
+                </p>
+            </div>
+            <div>
+                <strong style="color: var(--primary);">📦 Bulk Equipment</strong>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                    For consumables or identical items (oxygen regulators, suction apparatus)<br>
+                    Set Quantity = number of units (e.g., 10)
+                </p>
+            </div>
+            <div>
+                <strong style="color: var(--primary);">🏢 Departments</strong>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                    Select from existing departments or type a new one. New departments are created automatically.
+                </p>
+            </div>
+            <div>
+                <strong style="color: var(--primary);">📅 Dates</strong>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                    Track installation and warranty dates to receive maintenance alerts.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-clear new department input when existing department is selected
+    const departmentSelect = document.getElementById('departmentSelect');
+    const newDepartmentInput = document.getElementById('newDepartmentInput');
+    
+    departmentSelect.addEventListener('change', function() {
+        if (this.value) {
+            newDepartmentInput.value = '';
+            newDepartmentInput.disabled = true;
+            newDepartmentInput.placeholder = 'Selecting existing department...';
+        } else {
+            newDepartmentInput.disabled = false;
+            newDepartmentInput.placeholder = 'Or enter new department name';
+        }
+    });
+    
+    newDepartmentInput.addEventListener('input', function() {
+        if (this.value) {
+            departmentSelect.value = '';
+            departmentSelect.disabled = true;
+        } else {
+            departmentSelect.disabled = false;
+        }
+    });
+    
+    // Reset form function
+    function resetForm() {
+        if (confirm('Reset all form fields? This will clear all entered data.')) {
+            document.getElementById('equipmentForm').reset();
+            departmentSelect.disabled = false;
+            newDepartmentInput.disabled = false;
+            newDepartmentInput.placeholder = 'Or enter new department name';
+            
+            // Set default quantity
+            document.getElementById('quantityInput').value = 1;
+            
+            // Show success message
+            showToast('Form reset successfully', 'success');
+        }
+    }
+    
+    // Simple toast notification (optional)
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
+        toast.style.color = 'white';
+        toast.style.padding = '12px 20px';
+        toast.style.borderRadius = '10px';
+        toast.style.zIndex = '1000';
+        toast.style.animation = 'fadeInUp 0.3s ease';
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // Form validation before submit
+    document.getElementById('equipmentForm').addEventListener('submit', function(e) {
+        const name = document.querySelector('input[name="name"]').value.trim();
+        if (!name) {
+            e.preventDefault();
+            alert('Please enter equipment name');
+            return false;
+        }
+        
+        // Optional: Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '⏳ Saving...';
+        
+        return true;
+    });
+    
+    // Auto-capitalize first letter of equipment name
+    const nameInput = document.querySelector('input[name="name"]');
+    nameInput.addEventListener('blur', function() {
+        if (this.value) {
+            this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+        }
+    });
+    
+    // Prevent negative quantity
+    const quantityInput = document.getElementById('quantityInput');
+    quantityInput.addEventListener('change', function() {
+        if (this.value < 1) {
+            this.value = 1;
+        }
+    });
+</script>
+
+<style>
+    .form-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+    
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+{% endblock %}

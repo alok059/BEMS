@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - BEMS{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_description %}Welcome back, {{ session['user'] }}! Here's your equipment overview{% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card" onclick="window.location='/equipment_list'">
+        <div class="stat-icon">🏥</div>
+        <div class="stat-number">{{ total_quantity or 0 }}</div>
+        <div class="stat-label">Total Items</div>
+        <small style="color: var(--text-muted); font-size: 12px;">({{ total_equipment_count or 0 }} types)</small>
+    </div>
+    
+    <div class="stat-card" onclick="window.location='/equipment_list?status=Under Repair'">
+        <div class="stat-icon">🔧</div>
+        <div class="stat-number">{{ under_repair or 0 }}</div>
+        <div class="stat-label">Under Repair</div>
+        <small style="color: var(--text-muted); font-size: 12px;">Click to view →</small>
+    </div>
+    
+    <div class="stat-card" onclick="window.location='/tasks'">
+        <div class="stat-icon">📋</div>
+        <div class="stat-number">{{ pending_tasks or 0 }}</div>
+        <div class="stat-label">Pending Tasks</div>
+        <small style="color: var(--text-muted); font-size: 12px;">Click to view →</small>
+    </div>
+    
+    <div class="stat-card" onclick="window.location='/pm'">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-number">{{ pms_due or 0 }}</div>
+        <div class="stat-label">PM Due</div>
+        <small style="color: var(--text-muted); font-size: 12px;">Click to view →</small>
+    </div>
+</div>
+
+<!-- Today's Tasks Alert -->
+{% if tasks_today > 0 %}
+<div class="alert alert-warning fade-in-up">
+    <span style="font-size: 24px;">📅</span>
+    <div style="flex: 1;">
+        <strong>You have {{ tasks_today }} task{% if tasks_today != 1 %}s{% endif %} due today!</strong>
+        <p style="margin-top: 4px; font-size: 13px;">Don't forget to complete your scheduled work.</p>
+    </div>
+    <a href="/tasks" class="btn btn-sm" style="background: var(--warning); color: white;">View Tasks →</a>
+</div>
+{% endif %}
+
+<!-- Overdue PM Alert -->
+{% if pms_due > 0 %}
+<div class="alert alert-danger fade-in-up">
+    <span style="font-size: 24px;">⚠️</span>
+    <div style="flex: 1;">
+        <strong>{{ pms_due }} preventive maintenance{% if pms_due != 1 %}s{% endif %} overdue!</strong>
+        <p style="margin-top: 4px; font-size: 13px;">Please perform scheduled maintenance immediately.</p>
+    </div>
+    <a href="/pm" class="btn btn-sm" style="background: var(--danger); color: white;">View PM Schedule →</a>
+</div>
+{% endif %}
+
+<!-- Quick Actions Card -->
+<div class="card" style="margin-bottom: 32px;">
+    <div class="card-header">
+        <h3 class="card-title">⚡ Quick Actions</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/add" class="btn btn-primary">➕ New Equipment</a>
+            <a href="/tasks/add" class="btn btn-secondary">📋 Add Task</a>
+            <a href="/pm/add" class="btn btn-secondary">🔧 Schedule PM</a>
+            <a href="/equipment_list" class="btn btn-secondary">🔍 Search Equipment</a>
+            <a href="/departments" class="btn btn-secondary">🏢 Manage Departments</a>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📊 Recent Activity</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+            
+            <!-- Recently Added Equipment -->
+            <div>
+                <h4 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span>🆕</span> Recently Added Equipment
+                </h4>
+                {% if recent_equipment %}
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        {% for eq in recent_equipment %}
+                        <div class="task-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="window.location='/equipment/{{ eq.id }}'">
+                            <div>
+                                <strong>{{ eq.name }}</strong>
+                                <div style="font-size: 12px; color: var(--text-muted);">
+                                    {{ eq.model_no or 'No model' }} • {{ eq.quantity or 1 }} units
+                                </div>
+                            </div>
+                            <span style="font-size: 12px; color: var(--text-muted);">
+                                {{ eq.department_name or 'Unassigned' }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <div class="empty-state-icon">📦</div>
+                        <p>No equipment added yet</p>
+                        <a href="/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Equipment</a>
+                    </div>
+                {% endif %}
+                <a href="/equipment_list" style="color: var(--primary); font-size: 13px; margin-top: 12px; display: inline-block;">View all →</a>
+            </div>
+            
+            <!-- Recent Tasks -->
+            <div>
+                <h4 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span>✅</span> Recent Tasks
+                </h4>
+                {% if recent_tasks %}
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        {% for task in recent_tasks %}
+                        <div class="task-item {% if task.status == 'done' %}task-done{% endif %}" style="padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div style="flex: 1;">
+                                    <strong>{{ task.title }}</strong>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                        {% if task.category %}{{ task.category }} • {% endif %}Due: {{ task.date }}
+                                    </div>
+                                </div>
+                                {% if task.status != 'done' %}
+                                <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary" style="padding: 4px 8px;">✓ Done</a>
+                                {% else %}
+                                <span class="badge badge-done">Done</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No tasks yet</p>
+                        <a href="/tasks/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Task</a>
+                    </div>
+                {% endif %}
+                <a href="/tasks" style="color: var(--primary); font-size: 13px; margin-top: 12px; display: inline-block;">View all →</a>
+            </div>
+            
+            <!-- Upcoming PMs -->
+            <div>
+                <h4 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span>🔧</span> Upcoming PMs
+                </h4>
+                {% if upcoming_pms %}
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        {% for pm in upcoming_pms %}
+                        <div class="task-item" style="padding: 12px 0; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="window.location='/pm'">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>{{ pm.title }}</strong>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                        {{ pm.equipment_name or 'General' }} • {{ pm.frequency }}
+                                    </div>
+                                </div>
+                                <span class="badge {% if pm.next_due <= today %}badge-danger{% else %}badge-warning{% endif %}" style="background: var(--warning); color: black;">
+                                    Due: {{ pm.next_due }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <div class="empty-state-icon">✅</div>
+                        <p>No upcoming PMs scheduled</p>
+                        <a href="/pm" class="btn btn-primary btn-sm" style="margin-top: 12px;">Schedule PM</a>
+                    </div>
+                {% endif %}
+                <a href="/pm" style="color: var(--primary); font-size: 13px; margin-top: 12px; display: inline-block;">View all →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Department Overview -->
+<div class="card" style="margin-top: 32px;">
+    <div class="card-header">
+        <h3 class="card-title">🏥 Department Overview</h3>
+        <a href="/departments" style="color: var(--primary); font-size: 13px;">Manage Departments →</a>
+    </div>
+    <div class="card-body">
+        {% if department_stats %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+                {% for dept in department_stats %}
+                <div class="department-card" onclick="window.location='/departments/{{ dept.id }}/equipment'" style="cursor: pointer; text-align: center; padding: 20px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🏥</div>
+                    <div style="font-weight: 600; margin-bottom: 8px;">{{ dept.name }}</div>
+                    <div style="font-size: 28px; font-weight: bold; color: var(--primary);">{{ dept.count }}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">equipment items</div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="padding: 40px 20px;">
+                <div class="empty-state-icon">🏢</div>
+                <p>No departments yet. Add departments to organize your equipment.</p>
+                <a href="/departments" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Department</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Stats Footer -->
+<div style="margin-top: 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px; background: var(--bg-tertiary); border-radius: 16px;">
+    <div>
+        <span style="color: var(--text-muted);">📊 Total Equipment Types:</span>
+        <strong style="margin-left: 8px;">{{ total_equipment_count or 0 }}</strong>
+    </div>
+    <div>
+        <span style="color: var(--text-muted);">🏥 Departments:</span>
+        <strong style="margin-left: 8px;">{{ departments_count or 0 }}</strong>
+    </div>
+    <div>
+        <span style="color: var(--text-muted);">✅ Completed Tasks (Last 30 days):</span>
+        <strong style="margin-left: 8px;">{{ completed_tasks_count or 0 }}</strong>
+    </div>
+    <div>
+        <span style="color: var(--text-muted);">📅 Current Date:</span>
+        <strong style="margin-left: 8px;">{{ datetime.now().strftime('%B %d, %Y') }}</strong>
+    </div>
+</div>
+
+<script>
+    // Add hover effect animation to stat cards
+    document.querySelectorAll('.stat-card, .department-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Auto-refresh alerts every 5 minutes (optional)
+    // setInterval(function() {
+    //     location.reload();
+    // }, 300000);
+</script>
+
+{% endblock %}

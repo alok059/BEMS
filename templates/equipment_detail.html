@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}{{ eq.name }} - Equipment Details{% endblock %}
+
+{% block page_title %}{{ eq.name }}{% endblock %}
+{% block page_description %}Equipment details, repair history, and maintenance records{% endblock %}
+
+{% block content %}
+
+<!-- Action Buttons -->
+<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
+    <a href="/equipment_list" class="btn btn-secondary">
+        ← Back to List
+    </a>
+    <a href="/edit/{{ eq.id }}" class="btn btn-primary">
+        ✏️ Edit Equipment
+    </a>
+    {% if session.get('role') == 'admin' %}
+        <a href="/equipment/{{ eq.id }}/delete" 
+           class="btn btn-danger" 
+           onclick="return confirm('⚠️ WARNING: Delete "{{ eq.name }}"?\\n\\nThis will also delete:\\n- All repair records\\n- All linked tasks\\n- All PM schedules\\n\\nThis cannot be undone!')">
+            🗑️ Delete Equipment
+        </a>
+    {% endif %}
+</div>
+
+<!-- Equipment Details Card -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🔧 Equipment Information</h3>
+    </div>
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>Equipment Name</label>
+                <p><strong>{{ eq.name }}</strong></p>
+            </div>
+            <div class="detail-item">
+                <label>Model Number</label>
+                <p>{{ eq.model_no or '-' }}</p>
+            </div>
+            <div class="detail-item">
+                <label>Company / Manufacturer</label>
+                <p>{{ eq.company or '-' }}</p>
+            </div>
+            <div class="detail-item">
+                <label>Serial Number</label>
+                <p>
+                    {% if eq.serial_no %}
+                        <code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 6px;">{{ eq.serial_no }}</code>
+                    {% else %}
+                        -
+                    {% endif %}
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>Quantity</label>
+                <p>
+                    {% if eq.quantity and eq.quantity > 1 %}
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 14px;">
+                            {{ eq.quantity }} units
+                        </span>
+                    {% else %}
+                        1 unit
+                    {% endif %}
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>Department</label>
+                <p>
+                    {% if eq.department_obj %}
+                        <span class="badge" style="background: var(--bg-tertiary);">{{ eq.department_obj.name }}</span>
+                    {% elif eq.department_name %}
+                        <span class="badge" style="background: var(--bg-tertiary);">{{ eq.department_name }}</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>Status</label>
+                <p>
+                    <span class="badge badge-{{ eq.status.lower().replace(' ', '-') }}" style="font-size: 14px;">
+                        {{ eq.status }}
+                    </span>
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>Installation Date</label>
+                <p>{{ eq.install_date or '-' }}</p>
+            </div>
+            <div class="detail-item">
+                <label>Warranty Expiry</label>
+                <p>
+                    {{ eq.warranty_date or '-' }}
+                    {% if eq.warranty_date %}
+                        {% set today = datetime.now().strftime('%Y-%m-%d') %}
+                        {% if eq.warranty_date < today %}
+                            <span class="badge badge-danger" style="margin-left: 8px;">Expired</span>
+                        {% endif %}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>Last Service</label>
+                <p>{{ eq.last_service or '-' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Repair Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🛠 Add Repair Record</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/add_repair/{{ eq.id }}" class="repair-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Repair Date *</label>
+                    <input type="date" name="repair_date" class="form-control" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Technician</label>
+                    <input type="text" name="technician" class="form-control" placeholder="e.g., John Smith">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Cost (optional)</label>
+                    <input type="number" name="cost" class="form-control" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description *</label>
+                <textarea name="description" class="form-control" rows="3" placeholder="Describe the repair performed..." required></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">➕ Add Repair Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Repair History Section -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📜 Repair History</h3>
+        <a href="/export/pdf/repair/{{ eq.id }}" class="btn btn-secondary btn-sm">
+            📄 Export to PDF
+        </a>
+    </div>
+    <div class="card-body">
+        {% if repairs %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Technician</th>
+                            <th>Description</th>
+                            <th>Cost</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for repair in repairs %}
+                            <tr>
+                                <td><strong>{{ repair.repair_date or '-' }}</strong></td>
+                                <td>{{ repair.technician or '-' }}</td>
+                                <td>{{ repair.description or '-' }}</td>
+                                <td>
+                                    {% if repair.cost and repair.cost > 0 %}
+                                        <span style="color: var(--primary);">${{ "%.2f"|format(repair.cost) }}</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-secondary" 
+                                            onclick="editRepair({{ repair.id }}, '{{ repair.repair_date }}', '{{ repair.description }}', '{{ repair.technician }}', {{ repair.cost }})"
+                                            style="padding: 4px 8px;">
+                                        ✏️
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="deleteRepair({{ repair.id }})"
+                                            style="padding: 4px 8px;">
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔧</div>
+                    <p>No repair records found for this equipment.</p>
+                    <p style="font-size: 13px; color: var(--text-muted);">Add the first repair record using the form above.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Stats Card -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">📊 Quick Statistics</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+                <div style="text-align: center; padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px;">🔧</div>
+                    <div style="font-size: 20px; font-weight: bold;">{{ repairs|length }}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Total Repairs</div>
+                </div>
+                <div style="text-align: center; padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px;">💰</div>
+                    <div style="font-size: 20px; font-weight: bold;">
+                        {% set total_cost = namespace(value=0) %}
+                        {% for repair in repairs %}
+                            {% if repair.cost %}
+                                {% set total_cost.value = total_cost.value + repair.cost %}
+                            {% endif %}
+                        {% endfor %}
+                        ${{ "%.2f"|format(total_cost.value) }}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Total Cost</div>
+                </div>
+                <div style="text-align: center; padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px;">📅</div>
+                    <div style="font-size: 20px; font-weight: bold;">
+                        {% if repairs %}
+                            {% set last_repair = repairs|sort(attribute='repair_date', reverse=True)|first %}
+                            {{ last_repair.repair_date or '-' }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Last Repair</div>
+                </div>
+                <div style="text-align: center; padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 24px;">📋</div>
+                    <div style="font-size: 20px; font-weight: bold;">
+                        {% if eq.install_date %}
+                            {% set install_year = eq.install_date[:4] %}
+                            {{ ((datetime.now().year - install_year|int)) }} years
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Age (if known)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Edit repair function (opens prompt to edit)
+        function editRepair(id, date, description, technician, cost) {
+            const newDate = prompt('Enter new repair date (YYYY-MM-DD):', date);
+            if (newDate !== null && newDate !== date) {
+                const newDescription = prompt('Enter new description:', description);
+                if (newDescription !== null) {
+                    const newTechnician = prompt('Enter technician name:', technician);
+                    const newCost = prompt('Enter cost:', cost);
+                    
+                    // Submit to server
+                    fetch(`/edit_repair/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `repair_date=${encodeURIComponent(newDate)}&description=${encodeURIComponent(newDescription)}&technician=${encodeURIComponent(newTechnician)}&cost=${encodeURIComponent(newCost)}`
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            }
+        }
+        
+        // Delete repair function
+        function deleteRepair(id) {
+            if (confirm('Delete this repair record? This action cannot be undone.')) {
+                fetch(`/delete_repair/${id}`, {
+                    method: 'POST'
+                }).then(() => {
+                    location.reload();
+                });
+            }
+        }
+        
+        // Highlight warranty expiry if expired
+        document.addEventListener('DOMContentLoaded', function() {
+            const warrantyDate = '{{ eq.warranty_date }}';
+            const today = new Date().toISOString().split('T')[0];
+            if (warrantyDate && warrantyDate < today) {
+                const warrantyElement = document.querySelector('.detail-item:contains("Warranty")');
+                if (warrantyElement) {
+                    warrantyElement.style.borderLeft = '3px solid var(--danger)';
+                }
+            }
+        });
+    </script>
+
+    {% endblock %}

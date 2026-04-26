@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+
+{% block title %}Import/Export - BEMS{% endblock %}
+
+{% block page_title %}Import / Export Data{% endblock %}
+{% block page_description %}Import equipment from spreadsheets or export your data to various formats{% endblock %}
+
+{% block content %}
+
+<!-- Export Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📤 Export Data</h3>
+    </div>
+    <div class="card-body">
+        <p style="margin-bottom: 16px; color: var(--text-muted);">
+            Download your equipment data in different formats for reporting or backup purposes.
+        </p>
+        
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/export/csv" class="btn btn-primary" style="background: #22c55e;">
+                📄 Export to CSV
+            </a>
+            <a href="/export/excel" class="btn btn-primary" style="background: #3b82f6;">
+                📊 Export to Excel
+            </a>
+            <a href="/export/pdf/equipment" class="btn btn-primary" style="background: #ef4444;">
+                📑 Export to PDF
+            </a>
+        </div>
+        
+        <div style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+                <span>📁 <strong>CSV:</strong> Compatible with Excel, Google Sheets</span>
+                <span>📊 <strong>Excel:</strong> Formatted spreadsheet with auto-width columns</span>
+                <span>📑 <strong>PDF:</strong> Professional report format</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📥 Import Equipment</h3>
+    </div>
+    <div class="card-body">
+        <p style="margin-bottom: 16px; color: var(--text-muted);">
+            Upload a CSV or Excel file to import equipment data. The system will automatically detect column names.
+        </p>
+        
+        <!-- Error Message -->
+        {% if error %}
+        <div class="alert alert-danger fade-in-up">
+            <span style="font-size: 20px;">❌</span>
+            <div style="flex: 1;">
+                <strong>Import Failed</strong>
+                <p style="margin-top: 4px; font-size: 13px;">{{ error }}</p>
+                {% if available_columns %}
+                    <p style="margin-top: 8px; font-size: 12px;">
+                        <strong>Columns found:</strong> {{ available_columns|join(', ') }}
+                    </p>
+                    <p style="font-size: 12px;">
+                        <strong>Required:</strong> Name (Equipment Name)
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Success Message -->
+        {% if success %}
+        <div class="alert alert-success fade-in-up">
+            <span style="font-size: 20px;">✅</span>
+            <div style="flex: 1;">
+                <strong>{{ success }}</strong>
+                {% if imported_count %}
+                    <p style="margin-top: 4px; font-size: 13px;">Imported: {{ imported_count }} items</p>
+                {% endif %}
+                {% if skipped_count %}
+                    <p style="font-size: 13px;">Skipped: {{ skipped_count }} items</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Warnings -->
+        {% if warnings %}
+        <div class="alert alert-warning fade-in-up">
+            <span style="font-size: 20px;">⚠️</span>
+            <div style="flex: 1;">
+                <strong>Warnings</strong>
+                <ul style="margin-top: 8px; margin-left: 20px; font-size: 13px;">
+                    {% for warning in warnings[:5] %}
+                        <li>{{ warning }}</li>
+                    {% endfor %}
+                    {% if warnings|length > 5 %}
+                        <li>+{{ warnings|length - 5 }} more warnings</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Errors -->
+        {% if errors %}
+        <div class="alert alert-danger fade-in-up">
+            <span style="font-size: 20px;">❌</span>
+            <div style="flex: 1;">
+                <strong>Errors (not imported)</strong>
+                <ul style="margin-top: 8px; margin-left: 20px; font-size: 13px;">
+                    {% for error in errors[:5] %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                    {% if errors|length > 5 %}
+                        <li>+{{ errors|length - 5 }} more errors</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Import Form -->
+        <form method="POST" enctype="multipart/form-data" action="/import" id="importForm">
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Choose File</label>
+                <input type="file" name="file" accept=".csv,.xlsx,.xls" 
+                       class="form-control" required
+                       style="padding: 8px; cursor: pointer;">
+                <small class="form-text" style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Accepted formats: .csv, .xlsx, .xls (Max file size: 16MB)
+                </small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="importBtn">
+                    📥 Import Equipment
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetImportForm()">
+                    🔄 Clear
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Template Download Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📋 Download Template</h3>
+    </div>
+    <div class="card-body">
+        <p style="margin-bottom: 16px; color: var(--text-muted);">
+            Download a sample template to use as a reference for your import file.
+        </p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button onclick="downloadTemplate('csv')" class="btn btn-secondary">
+                📄 CSV Template
+            </button>
+            <button onclick="downloadTemplate('excel')" class="btn btn-secondary">
+                📊 Excel Template
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Smart Column Mapping Info -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🔍 Smart Column Mapping</h3>
+    </div>
+    <div class="card-body">
+        <p style="margin-bottom: 12px; color: var(--text-muted);">
+            The system automatically recognizes these column name variations. No need to match exact names!
+        </p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Equipment Name:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> name, equipment name, device name, title</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Model No:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> model, model no, model number, model #</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Company:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> company, manufacturer, brand, vendor, make</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Serial No:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> serial, serial no, serial number, sn, s/n</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Quantity:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> quantity, qty, number, count, units</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Department:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> department, dept, location, unit, ward</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Status:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> status, condition, state, working status</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Install Date:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> install date, installation date, date installed</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Warranty Date:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> warranty, warranty date, warranty expiry</span>
+            </div>
+            <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong style="color: var(--primary);">Last Service:</strong>
+                <span style="font-size: 12px; color: var(--text-muted);"> last service, last maintenance, service date</span>
+            </div>
+        </div>
+        
+        <div class="alert alert-success" style="margin-top: 16px; padding: 12px;">
+            <span>✨</span>
+            <div>
+                <strong>Tip:</strong> The system will find the right columns automatically. Only the "Name" column is required. All other columns are optional.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sample Format -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📋 Sample CSV Format</h3>
+    </div>
+    <div class="card-body">
+        <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; overflow-x: auto;">
+            <pre style="color: var(--text-primary); font-family: monospace; font-size: 12px; margin: 0;">
+Name,Model No,Company,Serial No,Quantity,Department,Status,Install Date,Warranty Date,Last Service
+Ventilator,V100,Philips,SN12345,1,ICU,Working,2024-01-15,2026-01-15,2024-06-01
+ECG Machine,ECG-2000,GE,SN67890,1,Emergency,Working,2024-02-01,2026-02-01,2024-05-15
+Infusion Pump,IP-3000,Baxter,SN11111,1,ICU,Under Repair,2023-06-01,2025-06-01,2024-03-10
+Oxygen Regulator,Standard,Generic,,10,General Ward,Working,,,
+Patient Monitor,PM-5000,Philips,SN22222,1,ICU,Working,2024-03-01,2026-03-01,2024-07-01
+            </pre>
+        </div>
+        
+        <div style="margin-top: 16px;">
+            <h4 style="margin-bottom: 8px;">📌 Column Descriptions</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 12px;">
+                <div><strong>Name</strong> - Required. Equipment name</div>
+                <div><strong>Model No</strong> - Optional. Model number</div>
+                <div><strong>Company</strong> - Optional. Manufacturer</div>
+                <div><strong>Serial No</strong> - Optional. Unique identifier</div>
+                <div><strong>Quantity</strong> - Optional. Default 1 for bulk items</div>
+                <div><strong>Department</strong> - Optional. Auto-creates new departments</div>
+                <div><strong>Status</strong> - Optional. Working/Under Repair/Scrap</div>
+                <div><strong>Install Date</strong> - Optional. YYYY-MM-DD format</div>
+                <div><strong>Warranty Date</strong> - Optional. YYYY-MM-DD format</div>
+                <div><strong>Last Service</strong> - Optional. YYYY-MM-DD format</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Tips -->
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">💡 Import Tips</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>✅ Only Name is Required</strong>
+                <p style="font-size: 12px; margin-top: 4px;">All other columns are optional. Missing fields will be left blank.</p>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>🔄 Auto-create Departments</strong>
+                <p style="font-size: 12px; margin-top: 4px;">New departments are automatically created from the Department column.</p>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>📦 Bulk Items</strong>
+                <p style="font-size: 12px; margin-top: 4px;">Use Quantity > 1 for identical items like oxygen regulators.</p>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>⚠️ Error Handling</strong>
+                <p style="font-size: 12px; margin-top: 4px;">Bad data in one row won't stop other rows from importing.</p>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>📅 Date Format</strong>
+                <p style="font-size: 12px; margin-top: 4px;">Use YYYY-MM-DD format (e.g., 2024-01-15) for dates.</p>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                <strong>📊 Download First</strong>
+                <p style="font-size: 12px; margin-top: 4px;">Export a file first to see the exact column format.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Import form handling
+    document.getElementById('importForm')?.addEventListener('submit', function(e) {
+        const fileInput = this.querySelector('input[type="file"]');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            e.preventDefault();
+            alert('Please select a file to import.');
+            return false;
+        }
+        
+        // Check file size (16MB max)
+        if (file.size > 16 * 1024 * 1024) {
+            e.preventDefault();
+            alert('File size exceeds 16MB limit. Please compress your file.');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('importBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '⏳ Importing...';
+        
+        return true;
+    });
+    
+    // Reset import form
+    function resetImportForm() {
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Clear any error/success messages by reloading the page
+        if (confirm('Clear the form? This will remove the selected file.')) {
+            window.location.href = '/import';
+        }
+    }
+    
+    // Download template function
+    function downloadTemplate(type) {
+        let content = '';
+        let filename = '';
+        
+        if (type === 'csv') {
+            content = `Name,Model No,Company,Serial No,Quantity,Department,Status,Install Date,Warranty Date,Last Service
+Ventilator,V100,Philips,SN12345,1,ICU,Working,2024-01-15,2026-01-15,2024-06-01
+ECG Machine,ECG-2000,GE,SN67890,1,Emergency,Working,2024-02-01,2026-02-01,2024-05-15
+Infusion Pump,IP-3000,Baxter,SN11111,1,ICU,Under Repair,2023-06-01,2025-06-01,2024-03-10
+Oxygen Regulator,Standard,Generic,,10,General Ward,Working,,,
+Patient Monitor,PM-5000,Philips,SN22222,1,ICU,Working,2024-03-01,2026-03-01,2024-07-01`;
+            filename = 'bems_import_template.csv';
+            
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } else if (type === 'excel') {
+            // For Excel, we'll use the export endpoint with a template flag
+            window.location.href = '/export/excel?template=true';
+        }
+    }
+    
+    // Auto-clear success/error messages after 10 seconds (optional)
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 300);
+            }, 8000);
+        });
+    }, 1000);
+</script>
+
+<style>
+    .fade-in-up {
+        animation: fadeInUp 0.3s ease;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .alert {
+        transition: opacity 0.3s ease;
+    }
+    
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style>
+
+{% endblock %}

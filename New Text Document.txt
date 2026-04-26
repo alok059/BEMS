@@ -1,0 +1,2 @@
+no equipment save without department.
+add remarks to equipment.

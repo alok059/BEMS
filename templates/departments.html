@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Department Management - BEMS{% endblock %}
+
+{% block page_title %}Department Management{% endblock %}
+{% block page_description %}Manage hospital departments and view equipment by department{% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card" onclick="window.location='/departments'">
+        <div class="stat-icon">🏥</div>
+        <div class="stat-number">{{ departments|length }}</div>
+        <div class="stat-label">Total Departments</div>
+    </div>
+    <div class="stat-card" onclick="window.location='/equipment_list'">
+        <div class="stat-icon">📋</div>
+        <div class="stat-number">{{ total_equipment or 0 }}</div>
+        <div class="stat-label">Total Equipment</div>
+    </div>
+    <div class="stat-card" onclick="window.location='/equipment_list?status=Under Repair'">
+        <div class="stat-icon">🔧</div>
+        <div class="stat-number">{{ under_repair or 0 }}</div>
+        <div class="stat-label">Under Repair</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-number">{{ departments|length }}</div>
+        <div class="stat-label">Active Departments</div>
+    </div>
+</div>
+
+<!-- Add Department Form -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">➕ Add New Department</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/departments/add">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Department Name *</label>
+                    <input type="text" name="name" class="form-control" 
+                           placeholder="e.g., Cardiology, ICU, Emergency" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Description</label>
+                    <input type="text" name="description" class="form-control" 
+                           placeholder="Brief description of the department">
+                </div>
+                <div class="form-actions" style="margin-bottom: 0; align-self: flex-end;">
+                    <button type="submit" class="btn btn-primary">➕ Add Department</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Departments Grid -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">🏢 All Departments</h3>
+        <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+            {{ departments|length }} departments
+        </span>
+    </div>
+    <div class="card-body">
+        {% if departments %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+                {% for dept in departments %}
+                <div class="department-card" style="background: var(--bg-secondary); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; transition: all 0.3s;">
+                    <!-- Department Header -->
+                    <div style="padding: 20px; background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-secondary) 100%);">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div style="font-size: 32px; margin-bottom: 8px;">🏥</div>
+                                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 4px;">{{ dept.name }}</h3>
+                                {% if dept.description %}
+                                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">{{ dept.description }}</p>
+                                {% endif %}
+                            </div>
+                            {% if session.get('role') == 'admin' %}
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="deleteDepartment({{ dept.id }}, '{{ dept.name }}', {{ dept.equipments|length }})"
+                                        style="padding: 6px 12px;">
+                                    🗑️
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Department Stats -->
+                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <div style="font-size: 28px; font-weight: bold; color: var(--primary);">
+                                    {{ dept.equipments|length }}
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-muted);">Equipment Items</div>
+                            </div>
+                            <div>
+                                {% set working_count = dept.equipments|selectattr('status', 'equalto', 'Working')|list|length %}
+                                {% set repair_count = dept.equipments|selectattr('status', 'equalto', 'Under Repair')|list|length %}
+                                <div style="display: flex; gap: 12px;">
+                                    <div>
+                                        <div style="font-size: 14px; font-weight: 600; color: var(--success);">{{ working_count }}</div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">Working</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 14px; font-weight: 600; color: var(--warning);">{{ repair_count }}</div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">Repair</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Equipment Preview -->
+                    <div style="padding: 16px 20px;">
+                        {% if dept.equipments %}
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Recent Equipment:</div>
+                                {% for eq in dept.equipments[:3] %}
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-color);">
+                                        <div style="font-size: 13px;">
+                                            <strong>{{ eq.name }}</strong>
+                                            {% if eq.quantity and eq.quantity > 1 %}
+                                                <span class="badge" style="background: var(--primary-light); font-size: 10px; margin-left: 4px;">x{{ eq.quantity }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <span class="badge badge-{{ eq.status.lower().replace(' ', '-') }}" style="font-size: 10px;">
+                                            {{ eq.status }}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                                {% if dept.equipments|length > 3 %}
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                                        +{{ dept.equipments|length - 3 }} more items
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div style="text-align: center; padding: 20px 0;">
+                                <div style="font-size: 12px; color: var(--text-muted);">No equipment assigned yet</div>
+                                <a href="/add?department_id={{ dept.id }}" class="btn btn-sm btn-primary" style="margin-top: 8px;">+ Add Equipment</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Department Actions -->
+                    <div style="padding: 12px 20px; background: var(--bg-tertiary); display: flex; gap: 8px;">
+                        <a href="/departments/{{ dept.id }}/equipment" class="btn btn-sm btn-primary" style="flex: 1; text-align: center;">
+                            📋 View All Equipment
+                        </a>
+                        {% if dept.equipments|length > 0 %}
+                            <button class="btn btn-sm btn-secondary" onclick="exportDepartment({{ dept.id }}, '{{ dept.name }}')" style="flex: 0.5;">
+                                📄 Export
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">🏢</div>
+                <p>No departments yet. Add your first department above!</p>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+                    Departments help organize equipment by location (ICU, Emergency, Radiology, etc.)
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Department Quick Stats -->
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📊 Department Equipment Distribution</h3>
+    </div>
+    <div class="card-body">
+        {% if departments %}
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for dept in departments %}
+                    {% set count = dept.equipments|length %}
+                    {% set percentage = (count / total_equipment * 100) if total_equipment > 0 else 0 %}
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span><strong>{{ dept.name }}</strong></span>
+                            <span>{{ count }} items ({{ "%.1f"|format(percentage) }}%)</span>
+                        </div>
+                        <div style="background: var(--bg-tertiary); border-radius: 10px; overflow: hidden;">
+                            <div style="width: {{ percentage }}%; height: 8px; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No data to display</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Tips -->
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">💡 Department Management Tips</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 20px; margin-bottom: 8px;">🏥</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Common Departments</div>
+                <div style="font-size: 13px; color: var(--text-muted);">
+                    ICU, Emergency, Radiology, Operation Theater, General Ward, Laboratory, Cardiology, Neurology
+                </div>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 20px; margin-bottom: 8px;">📋</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Equipment Assignment</div>
+                <div style="font-size: 13px; color: var(--text-muted);">
+                    Equipment can be assigned to departments when adding or editing. Click "View All Equipment" to see department-specific inventory.
+                </div>
+            </div>
+            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 20px; margin-bottom: 8px;">⚠️</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Deleting Departments</div>
+                <div style="font-size: 13px; color: var(--text-muted);">
+                    Deleting a department will move all equipment to "Unassigned". This action cannot be undone.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Delete department function with confirmation
+    function deleteDepartment(deptId, deptName, equipmentCount) {
+        let message = `⚠️ Delete department "${deptName}"?\n\n`;
+        if (equipmentCount > 0) {
+            message += `This department has ${equipmentCount} equipment item(s).\n`;
+            message += `They will be moved to "Unassigned".\n\n`;
+        }
+        message += `This action cannot be undone!`;
+        
+        if (confirm(message)) {
+            window.location.href = `/departments/${deptId}/delete`;
+        }
+    }
+    
+    // Export department equipment list
+    function exportDepartment(deptId, deptName) {
+        window.location.href = `/export/department/${deptId}`;
+    }
+    
+    // Add hover effect to department cards
+    document.querySelectorAll('.department-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px)';
+            this.style.boxShadow = 'var(--card-shadow-hover)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        });
+    });
+    
+    // Auto-submit on Enter in add form (optional)
+    const addForm = document.querySelector('form[action="/departments/add"]');
+    if (addForm) {
+        addForm.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                this.submit();
+            }
+        });
+    }
+</script>
+
+<style>
+    .department-card {
+        transition: all 0.3s ease;
+    }
+    
+    .department-card:hover {
+        transform: translateY(-4px);
+    }
+    
+    .badge-working {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge-under-repair {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    [data-theme="dark"] .badge-working {
+        background: #064e3b;
+        color: #6ee7b7;
+    }
+    
+    [data-theme="dark"] .badge-under-repair {
+        background: #78350f;
+        color: #fcd34d;
+    }
+</style>
+
+{% endblock %}

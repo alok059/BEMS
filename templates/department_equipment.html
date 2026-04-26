@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}{{ department.name }} - Equipment | BEMS{% endblock %}
+
+{% block page_title %}{{ department.name }} Department{% endblock %}
+{% block page_description %}{{ department.description or 'View and manage equipment in this department' }}{% endblock %}
+
+{% block content %}
+
+<!-- Department Header Card -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 32px;">🏥</span>
+            <div>
+                <h3 style="margin: 0;">{{ department.name }}</h3>
+                {% if department.description %}
+                    <p style="color: var(--text-muted); margin: 4px 0 0 0;">{{ department.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="/departments" class="btn btn-secondary btn-sm">
+                ← All Departments
+            </a>
+            <a href="/add?department_id={{ department.id }}" class="btn btn-primary btn-sm">
+                ➕ Add Equipment
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card" onclick="window.location='?status=all'">
+        <div class="stat-icon">📋</div>
+        <div class="stat-number">{{ equipments|length }}</div>
+        <div class="stat-label">Total Equipment</div>
+    </div>
+    <div class="stat-card" onclick="window.location='?status=Working'">
+        <div class="stat-icon">✅</div>
+        <div class="stat-number">{{ equipments|selectattr('status', 'equalto', 'Working')|list|length }}</div>
+        <div class="stat-label">Working</div>
+    </div>
+    <div class="stat-card" onclick="window.location='?status=Under Repair'">
+        <div class="stat-icon">🔧</div>
+        <div class="stat-number">{{ equipments|selectattr('status', 'equalto', 'Under Repair')|list|length }}</div>
+        <div class="stat-label">Under Repair</div>
+    </div>
+    <div class="stat-card" onclick="window.location='?status=Scrap'">
+        <div class="stat-icon">🗑️</div>
+        <div class="stat-number">{{ equipments|selectattr('status', 'equalto', 'Scrap')|list|length }}</div>
+        <div class="stat-label">Scrap</div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🔍 Search & Filter</h3>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="/departments/{{ department.id }}/equipment" id="filterForm">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Search by name, model, company, or serial..." 
+                       value="{{ search }}" style="flex: 2;">
+                <select name="status" class="form-control" style="width: 150px;">
+                    <option value="">All Status</option>
+                    <option value="Working" {% if status_filter == "Working" %}selected{% endif %}>Working</option>
+                    <option value="Under Repair" {% if status_filter == "Under Repair" %}selected{% endif %}>Under Repair</option>
+                    <option value="Scrap" {% if status_filter == "Scrap" %}selected{% endif %}>Scrap</option>
+                </select>
+                <button type="submit" class="btn btn-primary">🔍 Search</button>
+                {% if search or status_filter %}
+                    <a href="/departments/{{ department.id }}/equipment" class="btn btn-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Export Button -->
+<div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+    <button onclick="exportDepartment()" class="btn btn-secondary btn-sm">
+        📄 Export to CSV
+    </button>
+</div>
+
+<!-- Equipment Table -->
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Model</th>
+                <th>Company</th>
+                <th>Serial</th>
+                <th>Qty</th>
+                <th>Status</th>
+                <th>Last Service</th>
+                <th>Actions</th>
+            </thead>
+        <tbody>
+            {% for eq in equipments %}
+            <tr class="clickable-row" data-href="/equipment/{{ eq.id }}">
+                <td style="font-weight: 600;">{{ eq.id }}</td>
+                <td>
+                    <strong>{{ eq.name }}</strong>
+                    {% if eq.quantity and eq.quantity > 1 %}
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 10px; margin-left: 6px;">
+                            {{ eq.quantity }} units
+                        </span>
+                    {% endif %}
+                </td>
+                <td>{{ eq.model_no or '-' }}</td>
+                <td>{{ eq.company or '-' }}</td>
+                <td>
+                    {% if eq.serial_no %}
+                        <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 12px;">{{ eq.serial_no }}</code>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if eq.quantity and eq.quantity > 1 %}
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary);">{{ eq.quantity }}</span>
+                    {% else %}
+                        1
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ eq.status.lower().replace(' ', '-') }}">
+                        {{ eq.status }}
+                    </span>
+                </td>
+                <td>{{ eq.last_service or '-' }}</td>
+                <td style="display: flex; gap: 6px;">
+                    <a href="/equipment/{{ eq.id }}" class="btn btn-sm btn-secondary" title="View Details">👁️</a>
+                    <a href="/edit/{{ eq.id }}" class="btn btn-sm btn-secondary" title="Edit">✏️</a>
+                    {% if session.get('role') == 'admin' %}
+                        <a href="/equipment/{{ eq.id }}/delete" class="btn btn-sm btn-danger" 
+                           onclick="return confirmDelete('{{ eq.name }}', {{ eq.id }})"
+                           title="Delete">🗑️</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>No equipment found in {{ department.name }}.</p>
+                    <a href="/add?department_id={{ department.id }}" class="btn btn-primary btn-sm" style="margin-top: 12px;">
+                        ➕ Add Equipment to {{ department.name }}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Equipment Summary Section -->
+{% if equipments %}
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📊 Equipment Summary</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div style="text-align: center; padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 8px;">🔧</div>
+                <div style="font-size: 24px; font-weight: bold;">
+                    {{ equipments|selectattr('status', 'equalto', 'Under Repair')|list|length }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">Needs Repair</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 8px;">📦</div>
+                <div style="font-size: 24px; font-weight: bold;">
+                    {% set total_quantity = namespace(value=0) %}
+                    {% for eq in equipments %}
+                        {% set total_quantity.value = total_quantity.value + (eq.quantity or 1) %}
+                    {% endfor %}
+                    {{ total_quantity.value }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">Total Items</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 8px;">🏷️</div>
+                <div style="font-size: 24px; font-weight: bold;">
+                    {{ equipments|selectattr('serial_no')|list|length }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">With Serial Numbers</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
+                <div style="font-size: 24px; font-weight: bold;">
+                    {% set expired = namespace(value=0) %}
+                    {% for eq in equipments %}
+                        {% if eq.warranty_date and eq.warranty_date < today %}
+                            {% set expired.value = expired.value + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ expired.value }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">Expired Warranty</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Recommendations -->
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🔧 Maintenance Recommendations</h3>
+    </div>
+    <div class="card-body">
+        {% set overdue_equipment = [] %}
+        {% for eq in equipments %}
+            {% if eq.last_service %}
+                {% set last_date = eq.last_service %}
+                {% set six_months_ago = (today|replace('-', '')|int - 180) %}
+                {% set last_date_num = last_date|replace('-', '')|int %}
+                {% if last_date_num < six_months_ago %}
+                    {% set _ = overdue_equipment.append(eq) %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if overdue_equipment %}
+            <div class="alert alert-warning" style="margin-bottom: 16px;">
+                <span>⚠️</span>
+                <div style="flex: 1;">
+                    <strong>{{ overdue_equipment|length }} equipment item(s) need maintenance soon!</strong>
+                    <p style="margin-top: 4px; font-size: 13px;">These items haven't been serviced in over 6 months.</p>
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                {% for eq in overdue_equipment[:5] %}
+                    <a href="/equipment/{{ eq.id }}" class="btn btn-sm btn-secondary">
+                        {{ eq.name }}
+                    </a>
+                {% endfor %}
+                {% if overdue_equipment|length > 5 %}
+                    <span class="btn btn-sm btn-secondary">+{{ overdue_equipment|length - 5 }} more</span>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="padding: 20px;">
+                <p>✅ All equipment is up to date with maintenance!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // Make entire row clickable
+    document.querySelectorAll('.clickable-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' || e.target.closest('.btn')) {
+                return;
+            }
+            const href = this.getAttribute('data-href');
+            if (href) {
+                window.location.href = href;
+            }
+        });
+        row.style.cursor = 'pointer';
+    });
+    
+    // Confirm delete function
+    function confirmDelete(equipmentName, equipmentId) {
+        return confirm(`⚠️ Delete "${equipmentName}" from {{ department.name }}?\n\nThis will permanently remove this equipment and all its repair records.`);
+    }
+    
+    // Export department equipment to CSV
+    function exportDepartment() {
+        const search = new URLSearchParams(window.location.search).get('search') || '';
+        const status = new URLSearchParams(window.location.search).get('status') || '';
+        
+        let url = `/export/department/{{ department.id }}?`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+        if (status) url += `status=${encodeURIComponent(status)}&`;
+        
+        window.location.href = url;
+    }
+    
+    // Auto-submit on filter change (optional)
+    // Uncomment to enable auto-filter on status change
+    /*
+    document.querySelector('select[name="status"]').addEventListener('change', function() {
+        document.getElementById('filterForm').submit();
+    });
+    */
+    
+    // Add hover effect to table rows
+    document.querySelectorAll('.data-table tbody tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'var(--bg-tertiary)';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = 'transparent';
+        });
+    });
+</script>
+
+<style>
+    .clickable-row {
+        transition: background-color 0.2s;
+    }
+    
+    .badge-working {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge-under-repair {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    .badge-scrap {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    [data-theme="dark"] .badge-working {
+        background: #064e3b;
+        color: #6ee7b7;
+    }
+    
+    [data-theme="dark"] .badge-under-repair {
+        background: #78350f;
+        color: #fcd34d;
+    }
+    
+    [data-theme="dark"] .badge-scrap {
+        background: #7f1a1a;
+        color: #fecaca;
+    }
+    
+    .stat-card {
+        cursor: pointer;
+    }
+</style>
+
+{% endblock %}

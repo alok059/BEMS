@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Task Manager - BEMS{% endblock %}
+
+{% block page_title %}Task Manager{% endblock %}
+{% block page_description %}Manage your daily work, repairs, and maintenance tasks{% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card" onclick="window.location='/tasks?filter=today'">
+        <div class="stat-icon">📅</div>
+        <div class="stat-number">{{ today_tasks|length }}</div>
+        <div class="stat-label">Today's Tasks</div>
+    </div>
+    <div class="stat-card" onclick="window.location='/tasks?filter=pending'">
+        <div class="stat-icon">📋</div>
+        <div class="stat-number">{{ pending_tasks|length }}</div>
+        <div class="stat-label">Pending Tasks</div>
+    </div>
+    <div class="stat-card" onclick="window.location='/tasks?filter=overdue'">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-number">{{ overdue_tasks|length }}</div>
+        <div class="stat-label">Overdue</div>
+    </div>
+    <div class="stat-card" onclick="window.location='/tasks?filter=completed'">
+        <div class="stat-icon">✅</div>
+        <div class="stat-number">{{ completed_tasks|length }}</div>
+        <div class="stat-label">Completed (Recent)</div>
+    </div>
+</div>
+
+<!-- Quick Add Task Form -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">➕ Quick Add Task</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/tasks/add">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Task Title *</label>
+                    <input type="text" name="title" class="form-control" placeholder="e.g., Calibrate Ventilator" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Due Date *</label>
+                    <input type="date" name="date" class="form-control" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-control">
+                        <option value="high">🔴 High</option>
+                        <option value="medium" selected>🟡 Medium</option>
+                        <option value="low">🟢 Low</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control">
+                        <option value="general">General</option>
+                        <option value="repair">Repair</option>
+                        <option value="pm">Preventive Maintenance</option>
+                        <option value="inspection">Inspection</option>
+                        <option value="calibration">Calibration</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Task details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Equipment (Optional)</label>
+                    <select name="equipment_id" class="form-control">
+                        <option value="">-- Select Equipment --</option>
+                        {% for eq in equipments %}
+                            <option value="{{ eq.id }}">{{ eq.name }} ({{ eq.serial_no or 'No SN' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control" placeholder="Additional notes">
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">➕ Add Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Overdue Tasks Alert -->
+{% if overdue_tasks %}
+<div class="alert alert-danger fade-in-up">
+    <span style="font-size: 24px;">⚠️</span>
+    <div style="flex: 1;">
+        <strong>{{ overdue_tasks|length }} overdue task{% if overdue_tasks|length != 1 %}s{% endif %}!</strong>
+        <p style="margin-top: 4px; font-size: 13px;">Please complete these tasks immediately.</p>
+    </div>
+    <a href="#overdue-section" class="btn btn-sm" style="background: var(--danger); color: white;">View Overdue →</a>
+</div>
+{% endif %}
+
+<!-- Today's Tasks Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📅 Today's Tasks</h3>
+        <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+            {{ today_tasks|length }} tasks
+        </span>
+    </div>
+    <div class="card-body">
+        {% if today_tasks %}
+            <div class="task-list">
+                {% for task in today_tasks %}
+                <div class="task-item" style="background: var(--bg-tertiary); border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid 
+                    {% if task.priority == 'high' %}var(--danger){% elif task.priority == 'medium' %}var(--warning){% else %}var(--success){% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                                <strong style="font-size: 16px;">{{ task.title }}</strong>
+                                <span class="badge {% if task.priority == 'high' %}badge-scrap{% elif task.priority == 'medium' %}badge-pending{% else %}badge-working{% endif %}">
+                                    {{ task.priority|upper }}
+                                </span>
+                                <span class="badge" style="background: var(--bg-secondary);">{{ task.category|upper }}</span>
+                            </div>
+                            {% if task.description %}
+                                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">{{ task.description }}</p>
+                            {% endif %}
+                            {% if task.notes %}
+                                <p style="color: var(--text-muted); font-size: 12px;">📝 {{ task.notes }}</p>
+                            {% endif %}
+                            {% if task.equipment_id %}
+                                <p style="color: var(--primary); font-size: 12px; margin-top: 8px;">🔧 Equipment ID: {{ task.equipment_id }}</p>
+                            {% endif %}
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="/tasks/{{ task.id }}/complete" class="btn btn-primary btn-sm" 
+                               onclick="return confirm('Mark "{{ task.title }}" as completed?')">
+                                ✓ Complete
+                            </a>
+                            <a href="/tasks/{{ task.id }}/edit" class="btn btn-secondary btn-sm">✏️ Edit</a>
+                            <a href="/tasks/{{ task.id }}/delete" class="btn btn-danger btn-sm" 
+                               onclick="return confirm('Delete task "{{ task.title }}"?')">🗑️</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">🎉</div>
+                <p>No tasks for today! Great job!</p>
+                <p style="font-size: 13px; color: var(--text-muted);">Use the form above to add new tasks.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tomorrow's Tasks Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">📅 Tomorrow's Tasks</h3>
+        <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+            {{ tomorrow_tasks|length }} tasks
+        </span>
+    </div>
+    <div class="card-body">
+        {% if tomorrow_tasks %}
+            <div class="task-list">
+                {% for task in tomorrow_tasks %}
+                <div class="task-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                        <strong>{{ task.title }}</strong>
+                        {% if task.description %}
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ task.description }}</div>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="/tasks/{{ task.id }}/complete" class="btn btn-primary btn-sm">✓ Complete</a>
+                        <a href="/tasks/{{ task.id }}/edit" class="btn btn-secondary btn-sm">✏️</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No tasks for tomorrow. Enjoy your evening! 🌙</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- All Pending Tasks Section -->
+<div class="card" style="margin-bottom: 24px;" id="pending-section">
+    <div class="card-header">
+        <h3 class="card-title">📋 All Pending Tasks</h3>
+        <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+            {{ pending_tasks|length }} tasks
+        </span>
+    </div>
+    <div class="card-body">
+        {% if pending_tasks %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Due Date</th>
+                            <th>Priority</th>
+                            <th>Category</th>
+                            <th>Equipment</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for task in pending_tasks %}
+                            <tr>
+                                <td>
+                                    <strong>{{ task.title }}</strong>
+                                    {% if task.description %}
+                                        <div style="font-size: 12px; color: var(--text-muted);">{{ task.description }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.date < datetime.now().strftime('%Y-%m-%d') %}
+                                        <span style="color: var(--danger);">⚠️ {{ task.date }}</span>
+                                    {% else %}
+                                        {{ task.date }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if task.priority == 'high' %}badge-scrap{% elif task.priority == 'medium' %}badge-pending{% else %}badge-working{% endif %}">
+                                        {{ task.priority }}
+                                    </span>
+                                </td>
+                                <td>{{ task.category }}</td>
+                                <td>
+                                    {% if task.equipment_id %}
+                                        <a href="/equipment/{{ task.equipment_id }}" style="color: var(--primary);">View →</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td style="display: flex; gap: 6px;">
+                                    <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary">✓</a>
+                                    <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm btn-secondary">✏️</a>
+                                    <a href="/tasks/{{ task.id }}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this task?')">🗑️</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">✅</div>
+                    <p>All caught up! No pending tasks.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Overdue Tasks Section (Detailed) -->
+    {% if overdue_tasks %}
+    <div class="card" style="margin-bottom: 24px;" id="overdue-section">
+        <div class="card-header">
+            <h3 class="card-title">⚠️ Overdue Tasks</h3>
+            <span class="badge" style="background: var(--danger); color: white;">
+                {{ overdue_tasks|length }} overdue
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Due Date</th>
+                            <th>Priority</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for task in overdue_tasks %}
+                            <tr style="background: rgba(239, 68, 68, 0.1);">
+                                <td>
+                                    <strong>{{ task.title }}</strong>
+                                    {% if task.description %}
+                                        <div style="font-size: 12px;">{{ task.description }}</div>
+                                    {% endif %}
+                                </td>
+                                <td><strong style="color: var(--danger);">{{ task.date }}</strong></td>
+                                <td>
+                                    <span class="badge badge-scrap">{{ task.priority }}</span>
+                                </td>
+                                <td>{{ task.category }}</td>
+                                <td style="display: flex; gap: 6px;">
+                                    <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary">✓ Complete</a>
+                                    <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm btn-secondary">✏️</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Completed Tasks Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">✅ Recently Completed Tasks</h3>
+                <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+                    {{ completed_tasks|length }} tasks
+                </span>
+            </div>
+            <div class="card-body">
+                {% if completed_tasks %}
+                    <div class="task-list">
+                        {% for task in completed_tasks %}
+                        <div class="task-item task-done" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); opacity: 0.7;">
+                            <div>
+                                <strong>{{ task.title }}</strong>
+                                <div style="font-size: 12px; color: var(--text-muted);">
+                                    Completed: {{ task.completed_at or task.date }}
+                                </div>
+                            </div>
+                            <a href="/tasks/{{ task.id }}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this completed task?')">🗑️</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No completed tasks yet. Complete some tasks to see them here!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions Footer -->
+        <div style="margin-top: 24px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; padding: 20px; background: var(--bg-tertiary); border-radius: 16px;">
+            <a href="/pm" class="btn btn-secondary">🔧 View PM Schedule</a>
+            <a href="/calendar" class="btn btn-secondary">📅 View Calendar</a>
+            <a href="/equipment_list" class="btn btn-secondary">📋 Equipment List</a>
+        </div>
+
+        <script>
+            // Auto-refresh tasks every 5 minutes (optional)
+            // setInterval(function() {
+            //     location.reload();
+            // }, 300000);
+            
+            // Highlight overdue tasks on load
+            document.addEventListener('DOMContentLoaded', function() {
+                const overdueSection = document.getElementById('overdue-section');
+                if (overdueSection) {
+                    overdueSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+            
+            // Filter tasks by URL parameter (optional)
+            const urlParams = new URLSearchParams(window.location.search);
+            const filter = urlParams.get('filter');
+            if (filter === 'today') {
+                document.querySelector('.card:contains("Today")')?.scrollIntoView({ behavior: 'smooth' });
+            } else if (filter === 'pending') {
+                document.getElementById('pending-section')?.scrollIntoView({ behavior: 'smooth' });
+            } else if (filter === 'overdue') {
+                document.getElementById('overdue-section')?.scrollIntoView({ behavior: 'smooth' });
+            }
+        </script>
+
+        {% endblock %}

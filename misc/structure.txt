@@ -1,0 +1,21 @@
+Architecture Upgrades
+Split your single app.py into Blueprints:
+bems/
+├── app.py                  # factory function only
+├── config.py               # all config classes
+├── extensions.py           # db, login_manager, etc.
+├── models/
+│   ├── equipment.py
+│   ├── user.py
+│   ├── maintenance.py
+│   └── audit.py            # NEW - audit log model
+├── routes/
+│   ├── auth.py
+│   ├── equipment.py
+│   ├── tasks.py
+│   ├── pm.py
+│   ├── departments.py
+│   ├── reports.py          # NEW
+│   └── api.py              # NEW - REST API
+├── templates/
+└── static/

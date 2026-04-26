@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Backup Management - BEMS{% endblock %}
+
+{% block page_title %}Database Backup Management{% endblock %}
+{% block page_description %}Create, download, and restore database backups{% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">💾</div>
+        <div class="stat-number">{{ db_size_mb or 0 }}</div>
+        <div class="stat-label">Database Size (MB)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📦</div>
+        <div class="stat-number">{{ backups|length }}</div>
+        <div class="stat-label">Total Backups</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-number">Daily</div>
+        <div class="stat-label">Auto Backup Schedule</div>
+        <small>2:00 AM daily</small>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🗑️</div>
+        <div class="stat-number">30 days</div>
+        <div class="stat-label">Retention Policy</div>
+        <small>Auto-cleanup</small>
+    </div>
+</div>
+
+<!-- Manual Backup Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">🔄 Manual Backup</h3>
+    </div>
+    <div class="card-body">
+        <p style="margin-bottom: 16px; color: var(--text-muted);">
+            Create an immediate backup of your current database. This is recommended before making major changes.
+        </p>
+        <a href="/backup/manual" class="btn btn-primary" onclick="return confirm('Create a manual backup now?')">
+            💾 Create Manual Backup
+        </a>
+    </div>
+</div>
+
+<!-- Backups List -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">📦 Available Backups</h3>
+        <span class="badge" style="background: var(--primary-light); color: var(--primary);">
+            {{ backups|length }} backup file(s)
+        </span>
+    </div>
+    <div class="card-body">
+        {% if backups %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Backup Date</th>
+                            <th>File Name</th>
+                            <th>Size</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr>
+                                <td style="font-weight: 500;">
+                                    <span class="badge" style="background: var(--bg-tertiary);">
+                                        📅 {{ backup.date }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 6px; font-size: 12px;">
+                                        {{ backup.filename }}
+                                    </code>
+                                </td>
+                                <td>{{ backup.size_mb }} MB</td>
+                                <td style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <a href="/backup/download/{{ backup.filename }}" 
+                                       class="btn btn-sm btn-primary" 
+                                       style="background: #3b82f6;"
+                                       title="Download Backup">
+                                        📥 Download
+                                    </a>
+                                    <button onclick="restoreBackup('{{ backup.filename }}', '{{ backup.date }}')" 
+                                            class="btn btn-sm btn-warning"
+                                            title="Restore Backup">
+                                        🔄 Restore
+                                    </button>
+                                    <button onclick="deleteBackup('{{ backup.filename }}', '{{ backup.date }}')" 
+                                            class="btn btn-sm btn-danger"
+                                            title="Delete Backup">
+                                        🗑️ Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">💾</div>
+                    <p>No backups found.</p>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+                        Click "Create Manual Backup" to create your first backup.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Backup Information Section -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">ℹ️ Backup Information</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">🤖 Automatic Backups</div>
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        • Runs daily at <strong>2:00 AM</strong><br>
+                        • Backups are saved in the <code>/backups</code> folder<br>
+                        • Filename format: <code>bems_backup_YYYYMMDD_HHMMSS.db</code>
+                    </div>
+                </div>
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">🗑️ Cleanup Policy</div>
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        • Backups older than <strong>30 days</strong> are automatically deleted<br>
+                        • Cleanup runs every <strong>Sunday at 3:00 AM</strong><br>
+                        • Keeps your backup folder organized
+                    </div>
+                </div>
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">📦 Backup Contents</div>
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        • Complete database including:<br>
+                        • All equipment records<br>
+                        • Repair history<br>
+                        • Tasks and PM schedules<br>
+                        • User accounts and settings
+                    </div>
+                </div>
+                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">💾 Storage Location</div>
+                    <div style="font-size: 13px; color: var(--text-muted); font-family: monospace;">
+                        📁 Project folder → /backups/<br>
+                        Total backup storage: 
+                        {% set total_size = namespace(value=0) %}
+                        {% for backup in backups %}
+                            {% set total_size.value = total_size.value + backup.size_mb %}
+                        {% endfor %}
+                        <strong>{{ "%.2f"|format(total_size.value) }} MB</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Tips Section -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">💡 Backup Tips</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>✅ Before Major Changes</strong>
+                    <p style="font-size: 12px; margin-top: 4px;">Always create a manual backup before bulk import, deletion, or system updates.</p>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>📤 Download Important Backups</strong>
+                    <p style="font-size: 12px; margin-top: 4px;">Download backups to your computer or cloud storage for extra safety.</p>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>⚠️ Restore Carefully</strong>
+                    <p style="font-size: 12px; margin-top: 4px;">Restoring replaces current data. A safety backup is created automatically before restore.</p>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>📅 Regular Schedule</strong>
+                    <p style="font-size: 12px; margin-top: 4px;">Automatic backups run daily at 2 AM. Ensure your computer is running at that time.</p>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>🔍 Verify Backups</strong>
+                    <p style="font-size: 12px; margin-top: 4px;">Periodically download and test a backup to ensure it's working properly.</p>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>🗂️ Naming Convention</strong>
+                    <p style="font-size: 12px; margin-top: 4px;">Backups are named with timestamp: bems_backup_20241225_020000.db (Dec 25, 2:00 AM)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Confirmation Modal (Inline) -->
+    <div id="restoreModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-secondary); border-radius: 20px; max-width: 500px; width: 90%; padding: 24px;">
+            <h3 style="margin-bottom: 16px;">⚠️ Restore Backup</h3>
+            <p id="restoreMessage" style="margin-bottom: 20px; color: var(--text-muted);"></p>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="closeRestoreModal()" class="btn btn-secondary">Cancel</button>
+                <a id="restoreConfirmBtn" href="#" class="btn btn-warning">Confirm Restore</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRestoreFile = '';
+        
+        // Restore backup function with confirmation
+        function restoreBackup(filename, date) {
+            currentRestoreFile = filename;
+            const message = `⚠️ WARNING: Restoring backup from ${date}\n\n` +
+                           `This will replace your current database with the version from:\n` +
+                           `${date}\n\n` +
+                           `All changes made after this backup will be LOST.\n\n` +
+                           `A safety backup of your current database will be created automatically.\n\n` +
+                           `Are you absolutely sure you want to proceed?`;
+            
+            if (confirm(message)) {
+                if (confirm(`FINAL WARNING: Restore backup from ${date}?\n\nThis action cannot be undone!`)) {
+                    window.location.href = `/backup/restore/${filename}`;
+                }
+            }
+        }
+        
+        // Delete backup function with confirmation
+        function deleteBackup(filename, date) {
+            if (confirm(`Delete backup from ${date}?\n\nFile: ${filename}\nSize: ${getSizeForFile(filename)}\n\nThis action cannot be undone.`)) {
+                window.location.href = `/backup/delete/${filename}`;
+            }
+        }
+        
+        // Helper to get file size (you can pass from backend or just show generic)
+        function getSizeForFile(filename) {
+            {% for backup in backups %}
+                if ('{{ backup.filename }}' === filename) {
+                    return '{{ backup.size_mb }} MB';
+                }
+            {% endfor %}
+            return 'Unknown size';
+        }
+        
+        // Add hover effect to table rows
+        document.querySelectorAll('.data-table tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--bg-tertiary)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'transparent';
+            });
+        });
+        
+        // Auto-refresh backup list every 30 seconds (optional - for monitoring)
+        // setInterval(function() {
+        //     location.reload();
+        // }, 30000);
+        
+        // Show backup statistics
+        console.log('Backup Management Loaded');
+        console.log('Total Backups: {{ backups|length }}');
+        console.log('Database Size: {{ db_size_mb }} MB');
+    </script>
+
+    <style>
+        .btn-warning {
+            background: var(--warning);
+            color: black;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        
+        code {
+            font-family: monospace;
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .stat-card {
+            cursor: default;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table td, .data-table th {
+            vertical-align: middle;
+        }
+    </style>
+
+    {% endblock %}
