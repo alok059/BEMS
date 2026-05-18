@@ -6,3 +6,4 @@ Werkzeug
 schedule
 openpyxl
 reportlab
+waitress

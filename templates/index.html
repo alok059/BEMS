@@ -69,9 +69,11 @@
     </div>
     <div class="card-body">
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <a href="/add" class="btn btn-primary">➕ New Equipment</a>
-            <a href="/tasks/add" class="btn btn-secondary">📋 Add Task</a>
-            <a href="/pm/add" class="btn btn-secondary">🔧 Schedule PM</a>
+            {% if session.get('role') in ['admin', 'superadmin'] %}
+                <a href="/add" class="btn btn-primary">➕ New Equipment</a>
+                <a href="/tasks/add" class="btn btn-secondary">📋 Add Task</a>
+                <a href="/pm/add" class="btn btn-secondary">🔧 Schedule PM</a>
+            {% endif %}
             <a href="/equipment_list" class="btn btn-secondary">🔍 Search Equipment</a>
             <a href="/departments" class="btn btn-secondary">🏢 Manage Departments</a>
         </div>
@@ -111,7 +113,9 @@
                     <div class="empty-state" style="padding: 40px 20px;">
                         <div class="empty-state-icon">📦</div>
                         <p>No equipment added yet</p>
-                        <a href="/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Equipment</a>
+                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                            <a href="/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Equipment</a>
+                        {% endif %}
                     </div>
                 {% endif %}
                 <a href="/equipment_list" style="color: var(--primary); font-size: 13px; margin-top: 12px; display: inline-block;">View all →</a>
@@ -133,7 +137,7 @@
                                         {% if task.category %}{{ task.category }} • {% endif %}Due: {{ task.date }}
                                     </div>
                                 </div>
-                                {% if task.status != 'done' %}
+                                {% if session.get('role') in ['admin', 'superadmin'] and task.status != 'done' %}
                                 <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary" style="padding: 4px 8px;">✓ Done</a>
                                 {% else %}
                                 <span class="badge badge-done">Done</span>
@@ -146,7 +150,9 @@
                     <div class="empty-state" style="padding: 40px 20px;">
                         <div class="empty-state-icon">📋</div>
                         <p>No tasks yet</p>
-                        <a href="/tasks/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Task</a>
+                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                            <a href="/tasks/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">Add Task</a>
+                        {% endif %}
                     </div>
                 {% endif %}
                 <a href="/tasks" style="color: var(--primary); font-size: 13px; margin-top: 12px; display: inline-block;">View all →</a>

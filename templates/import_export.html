@@ -120,6 +120,7 @@
         </div>
         {% endif %}
         
+        {% if session.get('role') in ['admin', 'superadmin'] %}
         <!-- Import Form -->
         <form method="POST" enctype="multipart/form-data" action="/import" id="importForm">
             <div class="form-group" style="margin-bottom: 20px;">
@@ -141,6 +142,11 @@
                 </button>
             </div>
         </form>
+        {% else %}
+            <div class="alert alert-info">
+                <strong>Import restricted:</strong> only admins and superadmins may upload equipment data.
+            </div>
+        {% endif %}
     </div>
 </div>
 
@@ -232,16 +238,27 @@
         <h3 class="card-title">📋 Sample CSV Format</h3>
     </div>
     <div class="card-body">
-        <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; overflow-x: auto;">
-            <pre style="color: var(--text-primary); font-family: monospace; font-size: 12px; margin: 0;">
-Name,Model No,Company,Serial No,Quantity,Department,Status,Install Date,Warranty Date,Last Service
-Ventilator,V100,Philips,SN12345,1,ICU,Working,2024-01-15,2026-01-15,2024-06-01
-ECG Machine,ECG-2000,GE,SN67890,1,Emergency,Working,2024-02-01,2026-02-01,2024-05-15
-Infusion Pump,IP-3000,Baxter,SN11111,1,ICU,Under Repair,2023-06-01,2025-06-01,2024-03-10
-Oxygen Regulator,Standard,Generic,,10,General Ward,Working,,,
-Patient Monitor,PM-5000,Philips,SN22222,1,ICU,Working,2024-03-01,2026-03-01,2024-07-01
-            </pre>
-        </div>
+<div style="
+    background: var(--bg-tertiary);
+    padding: 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+">
+    <pre style="
+        color: var(--text-primary);
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 0;
+        white-space: pre;
+    ">
+Name            Model No   Company   Serial No   Quantity   Department   Status    Install Date   Warranty Date   Last Service
+-----------------------------------------------------------------------------------------------------------------------------
+Ventilator      V100       Philips   SN12345     1          ICU          Working   2024-01-15     2026-01-15      2024-06-01
+    </pre>
+</div>
         
         <div style="margin-top: 16px;">
             <h4 style="margin-bottom: 8px;">📌 Column Descriptions</h4>

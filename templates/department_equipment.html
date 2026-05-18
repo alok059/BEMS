@@ -23,9 +23,11 @@
             <a href="/departments" class="btn btn-secondary btn-sm">
                 ← All Departments
             </a>
-            <a href="/add?department_id={{ department.id }}" class="btn btn-primary btn-sm">
-                ➕ Add Equipment
-            </a>
+            {% if session.get('role') in ['admin', 'superadmin'] %}
+                <a href="/add?department_id={{ department.id }}" class="btn btn-primary btn-sm">
+                    ➕ Add Equipment
+                </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -138,8 +140,8 @@
                 <td>{{ eq.last_service or '-' }}</td>
                 <td style="display: flex; gap: 6px;">
                     <a href="/equipment/{{ eq.id }}" class="btn btn-sm btn-secondary" title="View Details">👁️</a>
-                    <a href="/edit/{{ eq.id }}" class="btn btn-sm btn-secondary" title="Edit">✏️</a>
-                    {% if session.get('role') == 'admin' %}
+                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <a href="/edit/{{ eq.id }}" class="btn btn-sm btn-secondary" title="Edit">✏️</a>
                         <a href="/equipment/{{ eq.id }}/delete" class="btn btn-sm btn-danger" 
                            onclick="return confirmDelete('{{ eq.name }}', {{ eq.id }})"
                            title="Delete">🗑️</a>
@@ -151,9 +153,11 @@
                 <td colspan="9" class="empty-state">
                     <div class="empty-state-icon">📭</div>
                     <p>No equipment found in {{ department.name }}.</p>
-                    <a href="/add?department_id={{ department.id }}" class="btn btn-primary btn-sm" style="margin-top: 12px;">
-                        ➕ Add Equipment to {{ department.name }}
-                    </a>
+                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <a href="/add?department_id={{ department.id }}" class="btn btn-primary btn-sm" style="margin-top: 12px;">
+                            ➕ Add Equipment to {{ department.name }}
+                        </a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

@@ -37,9 +37,11 @@
         <a href="/equipment_list" class="nav-item {% if request.endpoint == 'equipment_list' %}active{% endif %}">
             Equipment
         </a>
-        <a href="/add" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
-            Add Equipment
-        </a>
+        {% if session.get('role') in ['admin', 'superadmin'] %}
+            <a href="/add" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
+                Add Equipment
+            </a>
+        {% endif %}
         <a href="/departments" class="nav-item {% if request.endpoint == 'departments' %}active{% endif %}">
             Departments
         </a>
@@ -52,10 +54,12 @@
         <a href="/import" class="nav-item {% if request.endpoint == 'import_data' %}active{% endif %}">
             Import/Export
         </a>
-        <a href="/backup/manage" class="nav-item {% if request.endpoint == 'manage_backups' %}active{% endif %}">
-            Backup
-        </a>
-        {% if session.get('role') == 'admin' %}
+        {% if session.get('role') in ['admin', 'superadmin'] %}
+            <a href="/backup/manage" class="nav-item {% if request.endpoint == 'manage_backups' %}active{% endif %}">
+                Backup
+            </a>
+        {% endif %}
+        {% if session.get('role') in ['admin', 'superadmin'] %}
             <a href="/users" class="nav-item {% if request.endpoint == 'user_management' %}active{% endif %}">
                 Users
             </a>

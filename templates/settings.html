@@ -53,7 +53,34 @@
 <div class="settings-section">
     <div class="settings-card">
         <div class="card-header">
-            <h3 class="card-title">📊 Display Settings</h3>
+            <h3 class="card-title">� Account</h3>
+        </div>
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Username</div>
+                <div class="settings-description">Your account username</div>
+            </div>
+            <div><strong>{{ session.get('user') }}</strong></div>
+        </div>
+        <form method="POST" action="/users/{{ session.get('user_id') }}/reset-password">
+            <div class="settings-item">
+                <div>
+                    <div class="settings-label">New Password</div>
+                    <div class="settings-description">Enter a new password for your account</div>
+                </div>
+                <input type="password" name="new_password" class="form-control" placeholder="New password" required>
+            </div>
+            <div class="settings-item" style="justify-content: flex-end; gap: 10px;">
+                <button type="submit" class="btn btn-primary">Change Password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="settings-section">
+    <div class="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">�📊 Display Settings</h3>
         </div>
         
         <div class="settings-item">
@@ -193,7 +220,7 @@
 </div>
 
 <!-- Security Settings (Admin Only) -->
-{% if session.get('role') == 'admin' %}
+{% if session.get('role') in ['admin', 'superadmin'] %}
 <div class="settings-section">
     <div class="settings-card">
         <div class="card-header">
@@ -305,7 +332,7 @@
 </div>
 
 <!-- Danger Zone (Admin Only) -->
-{% if session.get('role') == 'admin' %}
+{% if session.get('role') in ['admin', 'superadmin'] %}
 <div class="settings-section">
     <div class="settings-card" style="border-color: var(--danger);">
         <div class="card-header" style="border-bottom-color: var(--danger);">

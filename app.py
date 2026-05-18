@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, send_file, make_response, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
-import webbrowser
 import os
 import bcrypt
 from functools import wraps
@@ -15,26 +14,27 @@ import schedule
 import threading
 import time
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
 # ===== APP CONFIGURATION =====
 app = Flask(__name__)
-app.secret_key = "your-secret-key-change-this-in-production"
-
-# Force database to be in main project folder
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(BASE_DIR, 'bems.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or f"sqlite:///{os.path.join(BASE_DIR, 'bems.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['PERMANENT_SESSION_LIFETIME'] = 28800
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 # Upload configuration
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # Create folders
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs('backups', exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, 'backups'), exist_ok=True)
 
 db = SQLAlchemy(app)
 
@@ -105,7 +105,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(50), default='biomed')
+    role = db.Column(db.String(50), default='user')
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.String(50), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     last_login = db.Column(db.String(50))
@@ -122,6 +122,10 @@ class User(db.Model):
 
 # ===== DECORATORS =====
 
+SUPERADMIN_ROLE = 'superadmin'
+ADMIN_ROLE = 'admin'
+USER_ROLE = 'user'
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -135,56 +139,70 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
             return redirect('/login')
-        if session.get('role') != 'admin':
+        if session.get('role') not in (ADMIN_ROLE, SUPERADMIN_ROLE):
             return "Access Denied. Admin privileges required.", 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def superadmin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect('/login')
+        if session.get('role') != SUPERADMIN_ROLE:
+            return "Access Denied. Superadmin privileges required.", 403
         return f(*args, **kwargs)
     return decorated_function
 
 # ===== AUTO-CREATE ADMIN AND DEPARTMENTS =====
 
 def create_default_data():
-    with app.app_context():
-        if User.query.count() == 0:
-            print("=" * 50)
-            print("🔧 Creating default admin user...")
-            admin = User(username='admin', email='admin@bems.local', role='admin', is_active=True)
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("✅ Admin user created: admin / admin123")
-        
-        if Department.query.count() == 0:
-            print("🔧 Creating default departments...")
-            default_depts = [
-                ('ICU', 'Intensive Care Unit'),
-                ('Emergency', 'Emergency Department'),
-                ('Radiology', 'Medical Imaging Department'),
-                ('Operation Theater', 'Surgical Suite'),
-                ('General Ward', 'General Patient Ward'),
-                ('Laboratory', 'Clinical Laboratory'),
-                ('Cardiology', 'Heart Care Department'),
-                ('Neurology', 'Brain and Nervous System Department'),
-                ('Orthopedics', 'Bone and Joint Department'),
-                ('Pharmacy', 'Medication and Supplies')
-            ]
-            for dept_name, dept_desc in default_depts:
-                dept = Department(name=dept_name, description=dept_desc)
-                db.session.add(dept)
-            db.session.commit()
-            print(f"✅ Created {len(default_depts)} default departments")
+   
+    if User.query.count() == 0:
         print("=" * 50)
+        print("🔧 Creating default superadmin and default admin users...")
+        superadmin = User(username='superadmin', email='superadmin@bems.local', role=SUPERADMIN_ROLE, is_active=True)
+        superadmin.set_password('superadmin123')
+        db.session.add(superadmin)
+        admin = User(username='admin', email='admin@bems.local', role=ADMIN_ROLE, is_active=True)
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ Superadmin user created: superadmin / superadmin123")
+        print("✅ Admin user created: admin / admin123")
+    
+    if Department.query.count() == 0:
+        print("🔧 Creating default departments...")
+        default_depts = [
+            ('ICU', 'Intensive Care Unit'),
+            ('Emergency', 'Emergency Department'),
+            ('Radiology', 'Medical Imaging Department'),
+            ('Operation Theater', 'Surgical Suite'),
+            ('General Ward', 'General Patient Ward'),
+            ('Laboratory', 'Clinical Laboratory'),
+            ('Cardiology', 'Heart Care Department'),
+            ('Neurology', 'Brain and Nervous System Department'),
+            ('Orthopedics', 'Bone and Joint Department'),
+            ('Pharmacy', 'Medication and Supplies')
+        ]
+        for dept_name, dept_desc in default_depts:
+            dept = Department(name=dept_name, description=dept_desc)
+            db.session.add(dept)
+        db.session.commit()
+        print(f"✅ Created {len(default_depts)} default departments")
+    print("=" * 50)
 
 # ===== BACKUP SYSTEM =====
 
-BACKUP_FOLDER = 'backups'
+BACKUP_FOLDER = os.path.join(BASE_DIR, 'backups')
 
 def create_backup():
     try:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_filename = f"bems_backup_{timestamp}.db"
         backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
-        if os.path.exists('bems.db'):
-            shutil.copy2('bems.db', backup_path)
+        if os.path.exists(os.path.join(BASE_DIR, 'bems.db')):
+            shutil.copy2(os.path.join(BASE_DIR, 'bems.db'), backup_path)
             return backup_filename
         return None
     except Exception as e:
@@ -340,11 +358,12 @@ def logout():
 @login_required
 def settings():
     db_size_mb = 0
-    if os.path.exists('bems.db'):
-        db_size_mb = os.path.getsize('bems.db') / (1024 * 1024)
+    db_file_path = os.path.join(BASE_DIR, 'bems.db')
+    if os.path.exists(db_file_path):
+        db_size_mb = os.path.getsize(db_file_path) / (1024 * 1024)
     
     last_backup = None
-    backups = sorted(glob.glob(os.path.join('backups', 'bems_backup_*.db')), reverse=True)
+    backups = sorted(glob.glob(os.path.join(BACKUP_FOLDER, 'bems_backup_*.db')), reverse=True)
     if backups:
         last_backup_filename = os.path.basename(backups[0])
         try:
@@ -401,6 +420,7 @@ def equipment_list():
 
 @app.route('/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_equipment():
     if request.method == 'POST':
         name = request.form.get('name')
@@ -461,7 +481,7 @@ def equipment_detail(id):
     return render_template('equipment_detail.html', eq=eq, repairs=repairs, datetime=datetime)
 
 @app.route('/add_repair/<int:id>', methods=['POST'])
-@login_required
+@admin_required
 def add_repair(id):
     repair_date = request.form.get('repair_date')
     description = request.form.get('description')
@@ -482,7 +502,7 @@ def add_repair(id):
     return redirect(f'/equipment/{id}')
 
 @app.route('/edit_repair/<int:id>', methods=['POST'])
-@login_required
+@admin_required
 def edit_repair(id):
     repair = Repair.query.get(id)
     if repair:
@@ -497,7 +517,7 @@ def edit_repair(id):
     return redirect(request.referrer or f'/equipment/{repair.equipment_id}')
 
 @app.route('/delete_repair/<int:id>', methods=['POST'])
-@login_required
+@admin_required
 def delete_repair(id):
     repair = Repair.query.get(id)
     equipment_id = repair.equipment_id if repair else None
@@ -507,11 +527,8 @@ def delete_repair(id):
     return redirect(request.referrer or f'/equipment/{equipment_id}')
 
 @app.route('/equipment/<int:id>/delete')
-@login_required
+@admin_required
 def delete_equipment(id):
-    if session.get('role') != 'admin':
-        return "Access Denied", 403
-    
     eq = Equipment.query.get(id)
     if eq:
         Repair.query.filter_by(equipment_id=id).delete()
@@ -523,7 +540,7 @@ def delete_equipment(id):
     return redirect('/equipment_list')
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def edit_equipment(id):
     eq = Equipment.query.get(id)
     
@@ -580,7 +597,7 @@ def tasks():
                          datetime=datetime)
 
 @app.route('/tasks/add', methods=['POST'])
-@login_required
+@admin_required
 def add_task():
     title = request.form.get('title')
     description = request.form.get('description')
@@ -598,7 +615,7 @@ def add_task():
     return redirect('/tasks')
 
 @app.route('/tasks/<int:id>/complete')
-@login_required
+@admin_required
 def complete_task(id):
     task = Task.query.get(id)
     if task:
@@ -608,7 +625,7 @@ def complete_task(id):
     return redirect(request.referrer or '/tasks')
 
 @app.route('/tasks/<int:id>/delete')
-@login_required
+@admin_required
 def delete_task(id):
     task = Task.query.get(id)
     if task:
@@ -617,7 +634,7 @@ def delete_task(id):
     return redirect(request.referrer or '/tasks')
 
 @app.route('/tasks/<int:id>/edit', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def edit_task(id):
     task = Task.query.get(id)
     if request.method == 'POST':
@@ -657,7 +674,7 @@ def pm_scheduler():
                          completed_pms_count=completed_pms_count)
 
 @app.route('/pm/add', methods=['POST'])
-@login_required
+@admin_required
 def add_pm():
     equipment_id = request.form.get('equipment_id')
     title = request.form.get('title')
@@ -686,7 +703,7 @@ def add_pm():
     return redirect('/pm')
 
 @app.route('/pm/<int:id>/perform')
-@login_required
+@admin_required
 def perform_pm(id):
     pm = PreventiveMaintenance.query.get(id)
     if pm:
@@ -711,7 +728,7 @@ def perform_pm(id):
     return redirect('/pm')
 
 @app.route('/pm/<int:id>/delete')
-@login_required
+@admin_required
 def delete_pm(id):
     pm = PreventiveMaintenance.query.get(id)
     if pm:
@@ -731,7 +748,7 @@ def departments():
                          under_repair=under_repair)
 
 @app.route('/departments/add', methods=['POST'])
-@login_required
+@admin_required
 def add_department():
     name = request.form.get('name')
     description = request.form.get('description')
@@ -835,7 +852,14 @@ def add_user():
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
-    role = request.form.get('role')
+    role = request.form.get('role', USER_ROLE)
+    
+    if role not in (ADMIN_ROLE, USER_ROLE):
+        role = USER_ROLE
+
+    if session.get('role') != SUPERADMIN_ROLE and role == ADMIN_ROLE:
+        flash('Only superadmin can create admin users')
+        role = USER_ROLE
     
     existing = User.query.filter_by(username=username).first()
     if existing:
@@ -853,27 +877,69 @@ def add_user():
 def toggle_user(id):
     user = User.query.get(id)
     if user and user.id != session.get('user_id'):
+        if user.role in (ADMIN_ROLE, SUPERADMIN_ROLE) and session.get('role') != SUPERADMIN_ROLE:
+            return "Access Denied. Only superadmin can modify admin users.", 403
         user.is_active = not user.is_active
         db.session.commit()
     return redirect('/users')
 
-@app.route('/users/<int:id>/reset-password')
-@admin_required
+@app.route('/users/<int:id>/reset-password', methods=['GET', 'POST'])
+@login_required
 def reset_user_password(id):
     user = User.query.get(id)
-    if user:
-        new_password = request.args.get('password', 'temp123')
+    if not user:
+        return redirect(request.referrer or '/settings')
+
+    # Users can change their own password.
+    # Admin can reset passwords for regular users, but only superadmin can reset admin/superadmin accounts.
+    if user.id != session.get('user_id'):
+        if session.get('role') == USER_ROLE:
+            return "Access Denied. Only admins can reset other users' passwords.", 403
+        if user.role in (ADMIN_ROLE, SUPERADMIN_ROLE) and session.get('role') != SUPERADMIN_ROLE:
+            return "Access Denied. Only superadmin can modify admin users.", 403
+
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+    else:
+        if user.id == session.get('user_id'):
+            return redirect('/settings')
+        new_password = request.args.get('password')
+
+    if new_password:
         user.set_password(new_password)
         db.session.commit()
+
+    if user.id == session.get('user_id'):
+        return redirect('/settings')
+    return redirect('/users')
+
+@app.route('/users/<int:id>/change-role')
+@superadmin_required
+def change_user_role(id):
+    user = User.query.get(id)
+    if not user or user.role == SUPERADMIN_ROLE or user.id == session.get('user_id'):
+        return redirect('/users')
+
+    requested_role = request.args.get('role', USER_ROLE)
+    if requested_role not in (ADMIN_ROLE, USER_ROLE):
+        return redirect('/users')
+
+    if user.role != requested_role:
+        user.role = requested_role
+        db.session.commit()
+
     return redirect('/users')
 
 @app.route('/users/<int:id>/delete')
 @admin_required
 def delete_user(id):
     user = User.query.get(id)
-    if user and user.id != session.get('user_id') and user.role != 'admin':
-        db.session.delete(user)
-        db.session.commit()
+    if user and user.id != session.get('user_id'):
+        if user.role in (ADMIN_ROLE, SUPERADMIN_ROLE) and session.get('role') != SUPERADMIN_ROLE:
+            return "Access Denied. Only superadmin can modify admin users.", 403
+        if user.role != SUPERADMIN_ROLE:
+            db.session.delete(user)
+            db.session.commit()
     return redirect('/users')
 
 @app.route('/users/admin-reset-password', methods=['POST'])
@@ -884,6 +950,8 @@ def admin_reset_password():
     
     user = User.query.get(user_id)
     if user:
+        if user.role in (ADMIN_ROLE, SUPERADMIN_ROLE) and session.get('role') != SUPERADMIN_ROLE:
+            return "Access Denied. Only superadmin can modify admin users.", 403
         user.set_password(new_password)
         db.session.commit()
     
@@ -1024,6 +1092,9 @@ def export_repair_pdf(equipment_id):
 @login_required
 def import_data():
     if request.method == 'POST':
+        if session.get('role') not in ['admin', 'superadmin']:
+            flash('The import action is restricted to admin users.', 'danger')
+            return redirect('/import')
         if 'file' not in request.files:
             return render_template('import_export.html', error="No file selected")
         file = request.files['file']
@@ -1147,7 +1218,7 @@ def restore_backup(filename):
         create_backup()
         db.session.remove()
         db.engine.dispose()
-        shutil.copy2(backup_path, 'bems.db')
+        shutil.copy2(backup_path, os.path.join(BASE_DIR, 'bems.db'))
         with app.app_context():
             db.create_all()
         return "<h1>✅ Database Restored Successfully!</h1><p>Redirecting...</p><script>setTimeout(function(){ window.location.href='/'; }, 3000);</script>"
@@ -1180,16 +1251,20 @@ def manage_backups():
         size_mb = size_bytes / (1024 * 1024)
         backups.append({'filename': filename, 'date': formatted_date, 'size_mb': round(size_mb, 2)})
     db_size_mb = 0
-    if os.path.exists('bems.db'):
-        db_size_mb = os.path.getsize('bems.db') / (1024 * 1024)
+    db_file_path = os.path.join(BASE_DIR, 'bems.db')
+    if os.path.exists(db_file_path):
+        db_size_mb = os.path.getsize(db_file_path) / (1024 * 1024)
     return render_template('backup_manage.html', backups=backups, db_size_mb=round(db_size_mb, 2))
 
 # ===== RUN APP =====
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        create_default_data()
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        webbrowser.open("http://127.0.0.1:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+# if __name__ == '__main__':
+with app.app_context():
+    db.create_all()
+    create_default_data()
+host = os.environ.get('FLASK_RUN_HOST', '127.0.0.1')
+port = int(os.environ.get('FLASK_RUN_PORT', 5000))
+debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
+
+# For temporary hosting via reverse SSH tunnel, bind to localhost.
+app.run(debug=True, host=host, port=port)

@@ -12,10 +12,10 @@
     <a href="/equipment_list" class="btn btn-secondary">
         ← Back to List
     </a>
-    <a href="/edit/{{ eq.id }}" class="btn btn-primary">
-        ✏️ Edit Equipment
-    </a>
-    {% if session.get('role') == 'admin' %}
+    {% if session.get('role') in ['admin', 'superadmin'] %}
+        <a href="/edit/{{ eq.id }}" class="btn btn-primary">
+            ✏️ Edit Equipment
+        </a>
         <a href="/equipment/{{ eq.id }}/delete" 
            class="btn btn-danger" 
            onclick="return confirm('⚠️ WARNING: Delete "{{ eq.name }}"?\\n\\nThis will also delete:\\n- All repair records\\n- All linked tasks\\n- All PM schedules\\n\\nThis cannot be undone!')">
@@ -25,90 +25,109 @@
 </div>
 
 <!-- Equipment Details Card -->
-<div class="card" style="margin-bottom: 24px;">
+<div class="card equipment-card">
     <div class="card-header">
         <h3 class="card-title">🔧 Equipment Information</h3>
     </div>
+
     <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item">
-                <label>Equipment Name</label>
-                <p><strong>{{ eq.name }}</strong></p>
+        <div class="equipment-grid">
+
+            <div class="info-row">
+                <span class="info-label">Equipment Name</span>
+                <span class="info-value"><strong>{{ eq.name }}</strong></span>
             </div>
-            <div class="detail-item">
-                <label>Model Number</label>
-                <p>{{ eq.model_no or '-' }}</p>
+
+            <div class="info-row">
+                <span class="info-label">Model Number</span>
+                <span class="info-value">{{ eq.model_no or '-' }}</span>
             </div>
-            <div class="detail-item">
-                <label>Company / Manufacturer</label>
-                <p>{{ eq.company or '-' }}</p>
+
+            <div class="info-row">
+                <span class="info-label">Manufacturer</span>
+                <span class="info-value">{{ eq.company or '-' }}</span>
             </div>
-            <div class="detail-item">
-                <label>Serial Number</label>
-                <p>
+
+            <div class="info-row">
+                <span class="info-label">Serial Number</span>
+                <span class="info-value">
                     {% if eq.serial_no %}
-                        <code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 6px;">{{ eq.serial_no }}</code>
+                        <code class="serial-code">{{ eq.serial_no }}</code>
                     {% else %}
                         -
                     {% endif %}
-                </p>
+                </span>
             </div>
-            <div class="detail-item">
-                <label>Quantity</label>
-                <p>
+
+            <div class="info-row">
+                <span class="info-label">Quantity</span>
+                <span class="info-value">
                     {% if eq.quantity and eq.quantity > 1 %}
-                        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 14px;">
-                            {{ eq.quantity }} units
+                        <span class="badge primary-badge">
+                            {{ eq.quantity }} Units
                         </span>
                     {% else %}
-                        1 unit
+                        1 Unit
                     {% endif %}
-                </p>
+                </span>
             </div>
-            <div class="detail-item">
-                <label>Department</label>
-                <p>
+
+            <div class="info-row">
+                <span class="info-label">Department</span>
+                <span class="info-value">
                     {% if eq.department_obj %}
-                        <span class="badge" style="background: var(--bg-tertiary);">{{ eq.department_obj.name }}</span>
+                        <span class="badge soft-badge">
+                            {{ eq.department_obj.name }}
+                        </span>
                     {% elif eq.department_name %}
-                        <span class="badge" style="background: var(--bg-tertiary);">{{ eq.department_name }}</span>
+                        <span class="badge soft-badge">
+                            {{ eq.department_name }}
+                        </span>
                     {% else %}
                         -
                     {% endif %}
-                </p>
+                </span>
             </div>
-            <div class="detail-item">
-                <label>Status</label>
-                <p>
-                    <span class="badge badge-{{ eq.status.lower().replace(' ', '-') }}" style="font-size: 14px;">
+
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-value">
+                    <span class="badge badge-{{ eq.status.lower().replace(' ', '-') }}">
                         {{ eq.status }}
                     </span>
-                </p>
+                </span>
             </div>
-            <div class="detail-item">
-                <label>Installation Date</label>
-                <p>{{ eq.install_date or '-' }}</p>
+
+            <div class="info-row">
+                <span class="info-label">Installation Date</span>
+                <span class="info-value">{{ eq.install_date or '-' }}</span>
             </div>
-            <div class="detail-item">
-                <label>Warranty Expiry</label>
-                <p>
+
+            <div class="info-row">
+                <span class="info-label">Warranty Expiry</span>
+                <span class="info-value">
                     {{ eq.warranty_date or '-' }}
+
                     {% if eq.warranty_date %}
                         {% set today = datetime.now().strftime('%Y-%m-%d') %}
                         {% if eq.warranty_date < today %}
-                            <span class="badge badge-danger" style="margin-left: 8px;">Expired</span>
+                            <span class="badge badge-danger">Expired</span>
                         {% endif %}
                     {% endif %}
-                </p>
+                </span>
             </div>
-            <div class="detail-item">
-                <label>Last Service</label>
-                <p>{{ eq.last_service or '-' }}</p>
+
+            <div class="info-row">
+                <span class="info-label">Last Service</span>
+                <span class="info-value">{{ eq.last_service or '-' }}</span>
             </div>
+
         </div>
     </div>
 </div>
 
+
+{% if session.get('role') in ['admin', 'superadmin'] %}
 <!-- Add Repair Section -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">
@@ -140,6 +159,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <!-- Repair History Section -->
 <div class="card">
@@ -175,16 +195,18 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-secondary" 
-                                            onclick="editRepair({{ repair.id }}, '{{ repair.repair_date }}', '{{ repair.description }}', '{{ repair.technician }}', {{ repair.cost }})"
-                                            style="padding: 4px 8px;">
-                                        ✏️
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" 
-                                            onclick="deleteRepair({{ repair.id }})"
-                                            style="padding: 4px 8px;">
-                                        🗑️
-                                    </button>
+                                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                                        <button class="btn btn-sm btn-secondary" 
+                                                onclick="editRepair({{ repair.id }}, '{{ repair.repair_date }}', '{{ repair.description }}', '{{ repair.technician }}', {{ repair.cost }})"
+                                                style="padding: 4px 8px;">
+                                            ✏️
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" 
+                                                onclick="deleteRepair({{ repair.id }})"
+                                                style="padding: 4px 8px;">
+                                            🗑️
+                                        </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -222,7 +244,7 @@
                                 {% set total_cost.value = total_cost.value + repair.cost %}
                             {% endif %}
                         {% endfor %}
-                        ${{ "%.2f"|format(total_cost.value) }}
+                        Rs {{ "%.2f"|format(total_cost.value) }}
                     </div>
                     <div style="font-size: 12px; color: var(--text-muted);">Total Cost</div>
                 </div>

@@ -116,10 +116,10 @@
                     <a href="/equipment/{{ eq.id }}" class="btn btn-sm btn-secondary" title="View Details">
                         👁️
                     </a>
-                    <a href="/edit/{{ eq.id }}" class="btn btn-sm btn-secondary" title="Edit">
-                        ✏️
-                    </a>
-                    {% if session.get('role') == 'admin' %}
+                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <a href="/edit/{{ eq.id }}" class="btn btn-sm btn-secondary" title="Edit">
+                            ✏️
+                        </a>
                         <a href="/equipment/{{ eq.id }}/delete" 
                            class="btn btn-sm btn-danger" 
                            title="Delete"
@@ -134,7 +134,9 @@
                 <td colspan="9" class="empty-state">
                     <div class="empty-state-icon">📭</div>
                     <p>No equipment found.</p>
-                    <a href="/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">➕ Add Equipment</a>
+                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <a href="/add" class="btn btn-primary btn-sm" style="margin-top: 12px;">➕ Add Equipment</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

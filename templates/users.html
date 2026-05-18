@@ -20,9 +20,9 @@
         <div class="stat-label">Administrators</div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon">🔧</div>
-        <div class="stat-number">{{ users|selectattr('role', 'equalto', 'biomed')|list|length }}</div>
-        <div class="stat-label">Biomed Engineers</div>
+        <div class="stat-icon">👤</div>
+        <div class="stat-number">{{ users|selectattr('role', 'equalto', 'user')|list|length }}</div>
+        <div class="stat-label">Users</div>
     </div>
     <div class="stat-card">
         <div class="stat-icon">✅</div>
@@ -57,10 +57,10 @@
                 <div class="form-group" style="margin-bottom: 0;">
                     <label class="form-label">Role</label>
                     <select name="role" class="form-control">
-                        <option value="biomed">🔧 Biomed Engineer</option>
+                        <option value="user">👤 User</option>
+                        {% if session.get('role') == 'superadmin' %}
                         <option value="admin">👑 Administrator</option>
-                        <option value="nurse">🏥 Nurse</option>
-                        <option value="technician">🔧 Technician</option>
+                        {% endif %}
                     </select>
                 </div>
             </div>
@@ -108,14 +108,12 @@
                                 </td>
                                 <td>{{ user.email or '-' }}</td>
                                 <td>
-                                    {% if user.role == 'admin' %}
+                                    {% if user.role == 'superadmin' %}
+                                        <span class="badge" style="background: #7c3aed; color: white;">🛡️ Superadmin</span>
+                                    {% elif user.role == 'admin' %}
                                         <span class="badge" style="background: #dc2626; color: white;">👑 Admin</span>
-                                    {% elif user.role == 'biomed' %}
-                                        <span class="badge" style="background: #3b82f6; color: white;">🔧 Biomed</span>
-                                    {% elif user.role == 'nurse' %}
-                                        <span class="badge" style="background: #10b981; color: white;">🏥 Nurse</span>
                                     {% else %}
-                                        <span class="badge" style="background: #6b7280; color: white;">🔧 Technician</span>
+                                        <span class="badge" style="background: #3b82f6; color: white;">👤 User</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -129,23 +127,50 @@
                                 <td style="font-size: 12px;">{{ user.created_at[:10] if user.created_at else '-' }}</td>
                                 <td style="display: flex; gap: 6px; flex-wrap: wrap;">
                                     {% if user.id != session.get('user_id') %}
-                                        <button class="btn btn-sm btn-secondary" 
-                                                onclick="resetPassword({{ user.id }}, '{{ user.username }}')"
-                                                title="Reset Password">
-                                            🔑 Reset PW
-                                        </button>
-                                        <button class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}" 
-                                                onclick="toggleUser({{ user.id }}, '{{ user.username }}', {{ user.is_active|lower }})"
-                                                title="{% if user.is_active %}Disable{% else %}Enable{% endif %} User">
-                                            {% if user.is_active %}🔴 Disable{% else %}🟢 Enable{% endif %}
-                                        </button>
-                                    {% endif %}
-                                    {% if user.id != session.get('user_id') and user.role != 'admin' %}
-                                        <button class="btn btn-sm btn-danger" 
-                                                onclick="deleteUser({{ user.id }}, '{{ user.username }}')"
-                                                title="Delete User">
-                                            🗑️ Delete
-                                        </button>
+                                        {% if session.get('role') == 'superadmin' or user.role == 'user' %}
+                                            <button class="btn btn-sm btn-secondary" 
+                                                    onclick="resetPassword({{ user.id }}, '{{ user.username }}')"
+                                                    title="Reset Password">
+                                                🔑 Reset PW
+                                            </button>
+                                            <button class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}" 
+                                                    onclick="toggleUser({{ user.id }}, '{{ user.username }}', {{ user.is_active|lower }})"
+                                                    title="{% if user.is_active %}Disable{% else %}Enable{% endif %} User">
+                                                {% if user.is_active %}🔴 Disable{% else %}🟢 Enable{% endif %}
+                                            </button>
+                                        {% endif %}
+
+                                        {% if session.get('role') == 'superadmin' and user.role != 'superadmin' %}
+                                            {% if user.role == 'user' %}
+                                                <button class="btn btn-sm btn-primary"
+                                                        onclick="changeRole({{ user.id }}, '{{ user.username }}', 'admin')"
+                                                        title="Promote to Admin">
+                                                    🛡️ Promote
+                                                </button>
+                                            {% elif user.role == 'admin' %}
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                        onclick="changeRole({{ user.id }}, '{{ user.username }}', 'user')"
+                                                        title="Demote to User">
+                                                    🔽 Demote
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+
+                                        {% if session.get('role') == 'superadmin' or user.role == 'user' %}
+                                            <button class="btn btn-sm btn-danger" 
+                                                    onclick="deleteUser({{ user.id }}, '{{ user.username }}')"
+                                                    title="Delete User">
+                                                🗑️ Delete
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                                            <button class="btn btn-sm btn-secondary" 
+                                                    onclick="resetPassword({{ user.id }}, '{{ user.username }}')"
+                                                    title="Reset Your Password">
+                                                🔑 Reset My PW
+                                            </button>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>
@@ -210,24 +235,10 @@
                     </div>
                 </div>
                 <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
-                    <div style="font-size: 24px; margin-bottom: 8px;">🔧</div>
-                    <div style="font-weight: 600; margin-bottom: 4px;">Biomed Engineer</div>
+                    <div style="font-size: 24px; margin-bottom: 8px;">👤</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">User</div>
                     <div style="font-size: 12px; color: var(--text-muted);">
-                        Equipment management, repair tracking, task management, PM scheduling, view reports
-                    </div>
-                </div>
-                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
-                    <div style="font-size: 24px; margin-bottom: 8px;">🏥</div>
-                    <div style="font-weight: 600; margin-bottom: 4px;">Nurse</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">
-                        View equipment, report issues, view tasks (read-only for most features)
-                    </div>
-                </div>
-                <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 12px;">
-                    <div style="font-size: 24px; margin-bottom: 8px;">🔧</div>
-                    <div style="font-weight: 600; margin-bottom: 4px;">Technician</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">
-                        Limited access: View equipment, complete assigned tasks, add repair records
+                        Standard access: View dashboards, manage assigned tasks, and use the system without admin settings.
                     </div>
                 </div>
             </div>
@@ -263,6 +274,13 @@
                 } else {
                     alert('Password must be at least 4 characters long.');
                 }
+            }
+        }
+
+        function changeRole(userId, username, targetRole) {
+            const action = targetRole === 'admin' ? 'promote to admin' : 'demote to user';
+            if (confirm(`Are you sure you want to ${action} "${username}"?`)) {
+                window.location.href = `/users/${userId}/change-role?role=${encodeURIComponent(targetRole)}`;
             }
         }
         

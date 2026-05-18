@@ -45,6 +45,7 @@
 </div>
 {% endif %}
 
+{% if session.get('role') in ['admin', 'superadmin'] %}
 <!-- Add PM Form -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">
@@ -97,6 +98,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <!-- Due PMs Section (Urgent) -->
 {% if due_pms %}
@@ -126,14 +128,16 @@
                         {% endif %}
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <a href="/pm/{{ pm.id }}/perform" class="btn btn-primary btn-sm" 
-                       onclick="return confirm('Mark this PM as performed? This will create a new due date based on frequency.')">
-                        ✅ Perform & Reschedule
-                    </a>
-                    <a href="/pm/{{ pm.id }}/delete" class="btn btn-danger btn-sm" 
-                       onclick="return confirm('Delete this PM schedule? This cannot be undone.')">🗑️</a>
-                </div>
+                {% if session.get('role') in ['admin', 'superadmin'] %}
+                    <div style="display: flex; gap: 8px;">
+                        <a href="/pm/{{ pm.id }}/perform" class="btn btn-primary btn-sm" 
+                           onclick="return confirm('Mark this PM as performed? This will create a new due date based on frequency.')">
+                            ✅ Perform & Reschedule
+                        </a>
+                        <a href="/pm/{{ pm.id }}/delete" class="btn btn-danger btn-sm" 
+                           onclick="return confirm('Delete this PM schedule? This cannot be undone.')">🗑️</a>
+                    </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -190,10 +194,12 @@
                                     {% endif %}
                                 </td>
                                 <td style="display: flex; gap: 6px;">
-                                    <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
-                                       onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
-                                    <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
-                                       onclick="return confirm('Delete this PM schedule?')">🗑️</a>
+                                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                                        <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
+                                           onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
+                                        <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
+                                           onclick="return confirm('Delete this PM schedule?')">🗑️</a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -267,10 +273,12 @@
                                         {% endif %}
                                     </td>
                                     <td style="display: flex; gap: 6px;">
-                                        <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
-                                           onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
-                                        <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
-                                           onclick="return confirm('Delete this PM schedule?')">🗑️</a>
+                                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                                            <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
+                                               onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
+                                            <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
+                                               onclick="return confirm('Delete this PM schedule?')">🗑️</a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -31,6 +31,7 @@
     </div>
 </div>
 
+{% if session.get('role') in ['admin', 'superadmin'] %}
 <!-- Quick Add Task Form -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">
@@ -91,6 +92,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <!-- Overdue Tasks Alert -->
 {% if overdue_tasks %}
@@ -179,10 +181,12 @@
                             <div style="font-size: 12px; color: var(--text-muted);">{{ task.description }}</div>
                         {% endif %}
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <a href="/tasks/{{ task.id }}/complete" class="btn btn-primary btn-sm">✓ Complete</a>
-                        <a href="/tasks/{{ task.id }}/edit" class="btn btn-secondary btn-sm">✏️</a>
-                    </div>
+                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <div style="display: flex; gap: 8px;">
+                            <a href="/tasks/{{ task.id }}/complete" class="btn btn-primary btn-sm">✓ Complete</a>
+                            <a href="/tasks/{{ task.id }}/edit" class="btn btn-secondary btn-sm">✏️</a>
+                        </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -245,9 +249,11 @@
                                     {% endif %}
                                 </td>
                                 <td style="display: flex; gap: 6px;">
-                                    <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary">✓</a>
-                                    <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm btn-secondary">✏️</a>
-                                    <a href="/tasks/{{ task.id }}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this task?')">🗑️</a>
+                                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                                        <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary">✓</a>
+                                        <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm btn-secondary">✏️</a>
+                                        <a href="/tasks/{{ task.id }}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this task?')">🗑️</a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -298,8 +304,10 @@
                                 </td>
                                 <td>{{ task.category }}</td>
                                 <td style="display: flex; gap: 6px;">
-                                    <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary">✓ Complete</a>
-                                    <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm btn-secondary">✏️</a>
+                                    {% if session.get('role') in ['admin', 'superadmin'] %}
+                                        <a href="/tasks/{{ task.id }}/complete" class="btn btn-sm btn-primary">✓ Complete</a>
+                                        <a href="/tasks/{{ task.id }}/edit" class="btn btn-sm btn-secondary">✏️</a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -329,7 +337,9 @@
                                     Completed: {{ task.completed_at or task.date }}
                                 </div>
                             </div>
-                            <a href="/tasks/{{ task.id }}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this completed task?')">🗑️</a>
+                            {% if session.get('role') in ['admin', 'superadmin'] %}
+                                <a href="/tasks/{{ task.id }}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this completed task?')">🗑️</a>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
