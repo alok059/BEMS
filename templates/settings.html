@@ -176,6 +176,7 @@
 </div>
 
 <!-- Data Management -->
+{% if session.get('role') in ['admin', 'superadmin'] %}
 <div class="settings-section">
     <div class="settings-card">
         <div class="card-header">
@@ -218,6 +219,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Security Settings (Admin Only) -->
 {% if session.get('role') in ['admin', 'superadmin'] %}

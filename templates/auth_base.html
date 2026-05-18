@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BEMS Auth{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-container { width: 100%; max-width: 420px; }
+        .auth-card {
+            background: white; border-radius: 24px; padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            animation: fadeInUp 0.5s ease;
+        }
+        .auth-header { text-align: center; margin-bottom: 32px; }
+        .auth-icon { font-size: 64px; margin-bottom: 16px; }
+        .auth-header h1 { font-size: 24px; color: #1e293b; margin-bottom: 8px; }
+        .auth-header p { color: #64748b; font-size: 14px; }
+        .auth-footer { text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #64748b; }
+        .auth-footer a { color: #10b981; text-decoration: none; font-weight: 600; transition: color 0.2s; }
+        .auth-footer a:hover { color: #059669; text-decoration: underline; }
+        
+        [data-theme="dark"] .auth-card {
+            background: #1e293b;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        [data-theme="dark"] .auth-header h1 { color: #f1f5f9; }
+        [data-theme="dark"] .auth-header p, [data-theme="dark"] .auth-footer { color: #cbd5e1; }
+        [data-theme="dark"] .auth-footer { border-top-color: #334155; }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-icon">🏥</div>
+                <h1>BEMS</h1>
+                <p>{% block subtitle %}Welcome{% endblock %}</p>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            {% if error %}
+            <div class="alert alert-danger" style="margin-bottom: 20px;">
+                {{ error }}
+            </div>
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+            
+        </div>
+    </div>
+</body>
+</html>

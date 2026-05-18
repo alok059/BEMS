@@ -15,7 +15,7 @@
     <a href="/equipment/{{ eq.id }}" class="btn btn-secondary">
         👁️ View Details
     </a>
-    {% if session.get('role') == 'admin' %}
+    {% if session.get('role') in ['admin', 'superadmin'] %}
         <a href="/equipment/{{ eq.id }}/delete" 
            class="btn btn-danger" 
            onclick="return confirm('⚠️ WARNING: Delete "{{ eq.name }}"?\\n\\nThis will also delete:\\n- All repair records\\n- All linked tasks\\n- All PM schedules\\n\\nThis cannot be undone!')">

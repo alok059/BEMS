@@ -17,17 +17,58 @@
             Download your equipment data in different formats for reporting or backup purposes.
         </p>
         
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <a href="/export/csv" class="btn btn-primary" style="background: #22c55e;">
-                📄 Export to CSV
-            </a>
-            <a href="/export/excel" class="btn btn-primary" style="background: #3b82f6;">
-                📊 Export to Excel
-            </a>
-            <a href="/export/pdf/equipment" class="btn btn-primary" style="background: #ef4444;">
-                📑 Export to PDF
-            </a>
-        </div>
+<!-- Advanced Export Section -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3 class="card-title">⚙️ Advanced Export</h3>
+    </div>
+    <div class="card-body">
+        <form action="/export/advanced" method="GET" target="_blank">
+            <div class="form-grid">
+                <!-- Column Selection -->
+                <div class="form-group">
+                    <label class="form-label">Select Columns to Include</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+                        <div><input type="checkbox" name="cols" value="id" checked disabled> ID (Mandatory)</div>
+                        <div><input type="checkbox" name="cols" value="name" checked disabled> Name (Mandatory)</div>
+                        <div><input type="checkbox" name="cols" value="model_no" checked disabled> Model No (Mandatory)</div>
+                        <div><input type="checkbox" name="cols" value="company" checked disabled> Company (Mandatory)</div>
+                        <div><input type="checkbox" name="cols" value="serial_no" checked disabled> Serial No (Mandatory)</div>
+                        <div><input type="checkbox" name="cols" value="quantity"> Quantity</div>
+                        <div><input type="checkbox" name="cols" value="department_name"> Department</div>
+                        <div><input type="checkbox" name="cols" value="status"> Status</div>
+                        <div><input type="checkbox" name="cols" value="install_date"> Install Date</div>
+                        <div><input type="checkbox" name="cols" value="warranty_date"> Warranty Date</div>
+                        <div><input type="checkbox" name="cols" value="last_service"> Last Service</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="form-group">
+                    <label class="form-label">Apply Filters</label>
+                    <select name="dept_id" class="form-control" style="margin-bottom: 8px;">
+                        <option value="">-- All Departments --</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="status" class="form-control">
+                        <option value="">-- All Statuses --</option>
+                        <option value="Working">Working</option>
+                        <option value="Under Repair">Under Repair</option>
+                        <option value="Scrap">Scrap</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions" style="margin-top: 16px;">
+                <button type="submit" name="format" value="pdf" class="btn btn-danger">📑 Export PDF</button>
+                <button type="submit" name="format" value="csv" class="btn btn-primary" style="background: #22c55e;">📄 Export CSV</button>
+                <button type="submit" name="format" value="excel" class="btn btn-primary">📊 Export Excel</button>
+            </div>
+        </form>
+    </div>
+</div>
         
         <div style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
             <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px;">

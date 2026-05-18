@@ -179,7 +179,9 @@
                             <th>Technician</th>
                             <th>Description</th>
                             <th>Cost</th>
+                            {% if session.get('role') in ['admin', 'superadmin'] %}
                             <th>Actions</th>
+                            {% endif %}
                         </thead>
                         <tbody>
                             {% for repair in repairs %}
@@ -194,20 +196,20 @@
                                         -
                                     {% endif %}
                                 </td>
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <td>
-                                    {% if session.get('role') in ['admin', 'superadmin'] %}
-                                        <button class="btn btn-sm btn-secondary" 
-                                                onclick="editRepair({{ repair.id }}, '{{ repair.repair_date }}', '{{ repair.description }}', '{{ repair.technician }}', {{ repair.cost }})"
-                                                style="padding: 4px 8px;">
-                                            ✏️
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" 
-                                                onclick="deleteRepair({{ repair.id }})"
-                                                style="padding: 4px 8px;">
-                                            🗑️
-                                        </button>
-                                    {% endif %}
+                                    <button class="btn btn-sm btn-secondary" 
+                                            onclick="editRepair({{ repair.id }}, '{{ repair.repair_date }}', '{{ repair.description }}', '{{ repair.technician }}', {{ repair.cost }})"
+                                            style="padding: 4px 8px;">
+                                        ✏️
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="deleteRepair({{ repair.id }})"
+                                            style="padding: 4px 8px;">
+                                        🗑️
+                                    </button>
                                 </td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>

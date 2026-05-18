@@ -67,8 +67,9 @@
                     <label class="form-label">Department</label>
                     <select name="department_id" class="form-control" id="departmentSelect">
                         <option value="">-- Select Existing Department --</option>
+                        {% set selected_dept = request.args.get('department_id') %}
                         {% for dept in departments %}
-                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            <option value="{{ dept.id }}" {% if selected_dept|int == dept.id %}selected{% endif %}>{{ dept.name }}</option>
                         {% endfor %}
                     </select>
                     <small class="form-text" style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 8px;">

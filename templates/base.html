@@ -10,11 +10,6 @@
 </head>
 <body>
 
-<!-- Menu Button (Three Dots) -->
-<button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">
-    ⋮
-</button>
-
 <!-- Sidebar Overlay (closes when clicked outside) -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
@@ -88,9 +83,11 @@
     
     <!-- Top Navigation -->
     <div class="top-nav">
-        <div class="page-title">
-            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
-            <p>{% block page_description %}Welcome to your Biomedical Equipment Management System{% endblock %}</p>
+        <div class="top-nav-left">
+            <div class="page-title">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                <p>{% block page_description %}Welcome to your Biomedical Equipment Management System{% endblock %}</p>
+            </div>
         </div>
         <div class="top-nav-actions">
             <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
@@ -113,6 +110,17 @@
     
     <!-- Content Area -->
     <div class="content-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 24px;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </div>
     
@@ -123,18 +131,27 @@
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('active');
+        const mainContent = document.getElementById('mainContent');
+
+        if (window.innerWidth <= 768) {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        } else {
+            sidebar.classList.toggle('hidden');
+            mainContent.classList.toggle('expanded');
+        }
     }
-    
+
     // Close Sidebar Function
     function closeSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        
+        const mainContent = document.getElementById('mainContent');
+
         sidebar.classList.remove('open');
+        sidebar.classList.remove('hidden');
         overlay.classList.remove('active');
+        mainContent.classList.remove('expanded');
     }
     
     // Theme Toggle Function

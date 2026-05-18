@@ -263,7 +263,75 @@ def map_columns(df_columns):
             mapped[field] = None
     return mapped
 
-# ===== ROUTES =====
+@app.route('/export/advanced')
+@login_required
+def export_advanced():
+    cols = request.args.getlist('cols')
+    dept_id = request.args.get('dept_id')
+    status = request.args.get('status')
+    fmt = request.args.get('format', 'csv')
+    
+    query = Equipment.query
+    if dept_id and dept_id.isdigit():
+        query = query.filter_by(department_id=int(dept_id))
+    if status:
+        query = query.filter_by(status=status)
+    equipments = query.all()
+    
+    # Define readable headers
+    field_map = {
+        'id': 'ID', 'name': 'Name', 'model_no': 'Model', 'company': 'Company',
+        'serial_no': 'Serial', 'quantity': 'Qty', 'department_name': 'Dept',
+        'status': 'Status', 'install_date': 'Install', 'warranty_date': 'Warranty', 'last_service': 'Service'
+    }
+    
+    # Mandatory fields
+    mandatory = ['id', 'name', 'model_no', 'company', 'serial_no']
+    selected_cols = mandatory + [c for c in cols if c not in mandatory]
+    headers = [field_map.get(c, c).title() for c in selected_cols]
+    
+    if fmt == 'csv':
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        for eq in equipments:
+            writer.writerow([getattr(eq, c) or '' for c in selected_cols])
+        output.seek(0)
+        return make_response((output.getvalue(), 200, {'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename=export.csv'}))
+        
+    elif fmt == 'excel':
+        data = []
+        for eq in equipments:
+            data.append({field_map.get(c, c): getattr(eq, c) or '' for c in selected_cols})
+        df = pd.DataFrame(data)
+        output = BytesIO()
+        df.to_excel(output, index=False)
+        output.seek(0)
+        return send_file(output, as_attachment=True, download_name='export.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    elif fmt == 'pdf':
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
+        from reportlab.lib.styles import getSampleStyleSheet
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter))
+        elements = [Paragraph("Advanced Equipment Export", getSampleStyleSheet()['Heading1']), Spacer(1, 12)]
+        
+        table_data = [headers]
+        for eq in equipments:
+            table_data.append([str(getattr(eq, c) or '-') for c in selected_cols])
+            
+        table = Table(table_data)
+        table.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.gray), ('GRID', (0,0), (-1,-1), 1, colors.black)]))
+        elements.append(table)
+        doc.build(elements)
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name='export.pdf', mimetype='application/pdf')
+
+    return "Invalid format", 400
+
 
 @app.route('/')
 @login_required
@@ -316,7 +384,8 @@ def index():
                          recent_tasks=recent_tasks,
                          upcoming_pms=upcoming_pms,
                          department_stats=department_stats,
-                         datetime=datetime)
+                         datetime=datetime,
+                         today=today)
 
 login_attempts = {}
 
@@ -328,7 +397,8 @@ def login():
         
         ip = request.remote_addr
         if ip in login_attempts and login_attempts[ip] >= 5:
-            return render_template('login.html', error="Too many login attempts. Try again later.")
+            flash("Too many login attempts. Try again later.", "danger")
+            return render_template('login.html')
         
         user = User.query.filter_by(username=username, is_active=True).first()
         
@@ -342,16 +412,49 @@ def login():
             db.session.commit()
             if ip in login_attempts:
                 del login_attempts[ip]
+            flash("Successfully logged in.", "success")
             return redirect('/')
         else:
             login_attempts[ip] = login_attempts.get(ip, 0) + 1
-            return render_template('login.html', error="Invalid username or password")
+            flash("Invalid username or password", "danger")
+            return render_template('login.html')
     
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not username or not password or not email:
+            flash("All fields are required.", "danger")
+            return redirect('/register')
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return redirect('/register')
+
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            flash("Username or email already exists.", "danger")
+            return redirect('/register')
+
+        new_user = User(username=username, email=email, role=USER_ROLE)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash("Registration successful! Please login.", "success")
+        return redirect('/login')
+
+    return render_template('register.html')
 
 @app.route('/logout')
 def logout():
     session.clear()
+    flash("You have been logged out.", "info")
     return redirect('/login')
 
 @app.route('/settings')
@@ -661,7 +764,7 @@ def pm_scheduler():
     active_pms = PreventiveMaintenance.query.filter_by(status='active').all()
     today = datetime.now().strftime('%Y-%m-%d')
     due_pms = [pm for pm in active_pms if pm.next_due and pm.next_due <= today]
-    upcoming_pms = [pm for pm in active_pms if pm.next_due and pm.next_due > today]
+    upcoming_pms = sorted([pm for pm in active_pms if pm.next_due and pm.next_due > today], key=lambda x: x.next_due)
     equipments = Equipment.query.all()
     completed_pms_count = PreventiveMaintenance.query.filter_by(status='completed').count()
     
@@ -1027,11 +1130,25 @@ def export_equipment_pdf():
     subtitle = Paragraph(f"Equipment Inventory Report - Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal'])
     elements.append(subtitle)
     elements.append(Spacer(1, 24))
-    data = [['ID', 'Name', 'Model', 'Company', 'Serial', 'Qty', 'Department', 'Status']]
+    data = [['ID', 'Name', 'Model', 'Company', 'Serial', 'Qty', 'Dept', 'Status', 'Install', 'Warranty', 'Last Service']]
     for eq in equipments:
-        data.append([str(eq.id), eq.name or '-', eq.model_no or '-', eq.company or '-',
-                     eq.serial_no or '-', str(eq.quantity or 1), eq.department_name or '-', eq.status or '-'])
-    table = Table(data)
+        data.append([
+            str(eq.id), 
+            eq.name or '-', 
+            eq.model_no or '-', 
+            eq.company or '-',
+            eq.serial_no or '-', 
+            str(eq.quantity or 1), 
+            eq.department_name or '-', 
+            eq.status or '-',
+            eq.install_date or '-',
+            eq.warranty_date or '-',
+            eq.last_service or '-'
+        ])
+    
+    # Calculate column widths (total landscape width is ~792)
+    col_widths = [30, 100, 70, 70, 70, 30, 70, 60, 60, 60, 60]
+    table = Table(data, colWidths=col_widths)
     table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#22c55e')),
                                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -1113,61 +1230,65 @@ def import_data():
                 df = pd.read_excel(filepath)
             os.remove(filepath)
             
+            # Use columns directly from CSV, clean them for mapping
+            df.columns = [c.strip() for c in df.columns]
             column_map = map_columns(df.columns)
+            
+            # If map_columns didn't find 'name', try to use 'Name' if exists
+            if not column_map.get('name'):
+                for col in df.columns:
+                    if col.lower() == 'name':
+                        column_map['name'] = col
+            
             if not column_map.get('name'):
                 return render_template('import_export.html', error="Could not find equipment name column", available_columns=list(df.columns))
             
             imported_count = 0
             skipped_count = 0
             errors = []
-            warnings = []
             
             for index, row in df.iterrows():
                 try:
-                    row_num = index + 2
-                    name = str(row[column_map['name']]) if column_map['name'] and pd.notna(row[column_map['name']]) else ''
-                    
-                    if not name or name == 'nan':
-                        warnings.append(f"Row {row_num}: Skipped - empty equipment name")
+                    name = str(row[column_map['name']]).strip() if column_map.get('name') and pd.notna(row[column_map['name']]) else ''
+                    if not name:
                         skipped_count += 1
                         continue
                     
-                    def get_value(field, default=''):
+                    # Mapping helper that returns None for missing values
+                    def get_clean_val(field):
                         col = column_map.get(field)
                         if col and col in df.columns and pd.notna(row[col]):
-                            return str(row[col])
-                        return default
+                            val = str(row[col]).strip()
+                            return val if val.lower() != 'nan' else None
+                        return None
                     
-                    department_name = get_value('department')
+                    department_name = get_clean_val('department')
                     department_obj = None
                     if department_name:
-                        existing_dept = Department.query.filter_by(name=department_name).first()
-                        if existing_dept:
-                            department_obj = existing_dept
-                        else:
-                            new_dept = Department(name=department_name)
-                            db.session.add(new_dept)
+                        department_obj = Department.query.filter_by(name=department_name).first()
+                        if not department_obj:
+                            department_obj = Department(name=department_name)
+                            db.session.add(department_obj)
                             db.session.commit()
-                            department_obj = new_dept
                     
-                    quantity = get_value('quantity', '1')
+                    qty_raw = get_clean_val('quantity')
                     try:
-                        quantity = int(float(quantity)) if quantity else 1
+                        quantity = int(float(qty_raw)) if qty_raw else 1
                     except:
                         quantity = 1
                     
                     new_eq = Equipment(
                         name=name,
-                        model_no=get_value('model_no'),
-                        company=get_value('company'),
-                        serial_no=get_value('serial_no'),
+                        model_no=get_clean_val('model_no'),
+                        company=get_clean_val('company'),
+                        serial_no=get_clean_val('serial_no'),
                         quantity=quantity,
                         department_id=department_obj.id if department_obj else None,
                         department_name=department_name,
-                        status=get_value('status', 'Working'),
-                        install_date=get_value('install_date'),
-                        warranty_date=get_value('warranty_date'),
-                        last_service=get_value('last_service')
+                        status=get_clean_val('status') or 'Working',
+                        install_date=get_clean_val('install_date'),
+                        warranty_date=get_clean_val('warranty_date'),
+                        last_service=get_clean_val('last_service')
                     )
                     
                     db.session.add(new_eq)
@@ -1175,20 +1296,17 @@ def import_data():
                     
                 except Exception as e:
                     skipped_count += 1
-                    errors.append(f"Row {row_num}: {str(e)}")
+                    errors.append(f"Row {index+2}: {str(e)}")
             
             db.session.commit()
             
-            message = f"Successfully imported {imported_count} equipment items."
-            if skipped_count > 0:
-                message += f" Skipped {skipped_count} items due to errors."
-            
-            return render_template('import_export.html', success=message, errors=errors, warnings=warnings, imported_count=imported_count, skipped_count=skipped_count)
+            flash(f"Successfully imported {imported_count} equipment items.", "success")
+            return render_template('import_export.html', success=f"Imported {imported_count} items.", errors=errors)
             
         except Exception as e:
             return render_template('import_export.html', error=f"Error reading file: {str(e)}")
     
-    return render_template('import_export.html')
+    return render_template('import_export.html', departments=Department.query.all())
 
 @app.route('/backup/manual')
 @admin_required

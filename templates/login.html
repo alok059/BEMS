@@ -1,83 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - BEMS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-container { width: 100%; max-width: 420px; padding: 20px; }
-        .login-card {
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            animation: fadeInUp 0.5s ease;
-        }
-        .login-header { text-align: center; margin-bottom: 32px; }
-        .login-icon { font-size: 64px; margin-bottom: 16px; }
-        .login-header h1 { font-size: 24px; color: #1e293b; margin-bottom: 8px; }
-        .login-header p { color: #64748b; font-size: 14px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #334155; }
-        .form-group input {
-            width: 100%; padding: 12px; border: 1px solid #e2e8f0;
-            border-radius: 12px; font-size: 14px; transition: all 0.2s;
-        }
-        .form-group input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
-        .btn-login {
-            width: 100%; padding: 12px; background: #10b981; border: none;
-            border-radius: 12px; color: white; font-weight: 600; font-size: 16px;
-            cursor: pointer; transition: all 0.2s;
-        }
-        .btn-login:hover { background: #059669; transform: translateY(-2px); }
-        .error-message {
-            background: #fee2e2; color: #991b1b; padding: 12px;
-            border-radius: 12px; margin-bottom: 20px; font-size: 14px;
-        }
-        .login-footer { text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="login-icon">🏥</div>
-                <h1>Biomedical Equipment Management System</h1>
-                <p>Login to access your dashboard</p>
-            </div>
-            {% if error %}
-            <div class="error-message">❌ {{ error }}</div>
-            {% endif %}
-            <form method="POST">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" name="username" placeholder="Enter username" required>
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" placeholder="Enter password" required>
-                </div>
-                <button type="submit" class="btn-login">Login →</button>
-            </form>
-            <div class="login-footer">
-                <p>Hello! Welcome to BEMS</p>
-                <p style="margin-top: 8px;">Contact administrator if you forgot your password</p>
-            </div>
-        </div>
+{% extends 'auth_base.html' %}
+
+{% block title %}Login - BEMS{% endblock %}
+
+{% block subtitle %}Login to access your dashboard{% endblock %}
+
+{% block content %}
+<form method="POST" action="/login">
+    <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" class="form-control" placeholder="Enter your username" required autofocus>
     </div>
-</body>
-</html>
+    
+    <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+    </div>
+    
+    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px; margin-top: 10px;">Login →</button>
+</form>
+
+<div class="auth-footer">
+    <p>Don't have an account? <a href="/register">Sign up</a></p>
+    <p style="margin-top: 8px; font-size: 12px; color: #94a3b8;">Contact administrator if you forgot your password</p>
+</div>
+{% endblock %}

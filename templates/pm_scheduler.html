@@ -164,7 +164,9 @@
                             <th>Frequency</th>
                             <th>Last Performed</th>
                             <th>Next Due</th>
+                            {% if session.get('role') in ['admin', 'superadmin'] %}
                             <th>Actions</th>
+                            {% endif %}
                         </thead>
                         <tbody>
                             {% for pm in upcoming_pms %}
@@ -193,14 +195,14 @@
                                         -
                                     {% endif %}
                                 </td>
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <td style="display: flex; gap: 6px;">
-                                    {% if session.get('role') in ['admin', 'superadmin'] %}
-                                        <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
-                                           onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
-                                        <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
-                                           onclick="return confirm('Delete this PM schedule?')">🗑️</a>
-                                    {% endif %}
+                                    <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
+                                       onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
+                                    <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
+                                       onclick="return confirm('Delete this PM schedule?')">🗑️</a>
                                 </td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -236,7 +238,9 @@
                                 <th>Last Performed</th>
                                 <th>Next Due</th>
                                 <th>Status</th>
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <th>Actions</th>
+                                {% endif %}
                             </thead>
                             <tbody>
                                 {% for pm in active_pms %}
@@ -272,14 +276,14 @@
                                             <span class="badge badge-working">ACTIVE</span>
                                         {% endif %}
                                     </td>
+                                    {% if session.get('role') in ['admin', 'superadmin'] %}
                                     <td style="display: flex; gap: 6px;">
-                                        {% if session.get('role') in ['admin', 'superadmin'] %}
-                                            <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
-                                               onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
-                                            <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
-                                               onclick="return confirm('Delete this PM schedule?')">🗑️</a>
-                                        {% endif %}
+                                        <a href="/pm/{{ pm.id }}/perform" class="btn btn-sm btn-primary" 
+                                           onclick="return confirm('Mark this PM as performed?')">✅ Perform</a>
+                                        <a href="/pm/{{ pm.id }}/delete" class="btn btn-sm btn-danger" 
+                                           onclick="return confirm('Delete this PM schedule?')">🗑️</a>
                                     </td>
+                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
