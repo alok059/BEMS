@@ -18,11 +18,21 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # ===== APP CONFIGURATION =====
 app = Flask(__name__)
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-in-production')
 
+# 🔥 MUST HAVE DATABASE_URL in production (Supabase)
 db_url = os.environ.get('DATABASE_URL')
-if db_url and db_url.startswith("postgres://"):
+
+if not db_url:
+    raise Exception("DATABASE_URL is not set (Supabase required)")
+
+# Fix old Heroku style URL
+if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url or f"sqlite:///{os.path.join(BASE_DIR, 'bems.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -32,8 +42,9 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 # Upload configuration
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
+UPLOAD_FOLDER = '/tmp/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
@@ -1382,13 +1393,9 @@ def manage_backups():
 
 # ===== RUN APP =====
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        create_default_data()
-    host = os.environ.get('FLASK_RUN_HOST', '127.0.0.1')
-    port = int(os.environ.get('FLASK_RUN_PORT', 5000))
-    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
+if __name__ == "__main__":
+    host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
+    port = int(os.environ.get("FLASK_RUN_PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "False").lower() in ("1", "true", "yes")
 
-    # For temporary hosting via reverse SSH tunnel, bind to localhost.
-    app.run(debug=True, host=host, port=port)
+    app.run(debug=debug, host=host, port=port)
