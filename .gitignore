@@ -1,6 +1,5 @@
 GEMINI.md
 
 __pycache__/*
-*.db
 *.md
 *.pyc
