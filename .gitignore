@@ -4,3 +4,5 @@ __pycache__/*
 *.md
 *.pyc
 *.env
+.vercel
+.env*

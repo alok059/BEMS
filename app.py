@@ -27,10 +27,18 @@ if not db_url:
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
+# Ensure SSL is required for Supabase
+if "sslmode=" not in db_url:
+    separator = "&" if "?" in db_url else "?"
+    db_url += f"{separator}sslmode=require"
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# Disable internal pooling for serverless environments
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'poolclass': NullPool}
+# Disable internal pooling for serverless environments (Supabase uses Supavisor)
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'poolclass': NullPool,
+    'connect_args': {'sslmode': 'require'}
+}
 
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
