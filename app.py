@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, send_file, make_response, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.pool import NullPool
 from datetime import datetime, timedelta
 import os
 import bcrypt
@@ -8,11 +9,6 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 import csv
 from io import StringIO, BytesIO
-import shutil
-import glob
-import schedule
-import threading
-import time
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -21,11 +17,11 @@ app = Flask(__name__)
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-in-production')
 
-# 🔥 MUST HAVE DATABASE_URL in production (Supabase)
+# Enforce DATABASE_URL for Supabase/Vercel
 db_url = os.environ.get('DATABASE_URL')
 
 if not db_url:
-    raise Exception("DATABASE_URL is not set (Supabase required)")
+    raise Exception("DATABASE_URL is not set (Supabase required for Vercel deployment)")
 
 # Fix old Heroku style URL
 if db_url.startswith("postgres://"):
@@ -33,24 +29,20 @@ if db_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Disable internal pooling for serverless environments
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'poolclass': NullPool}
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url or f"sqlite:///{os.path.join(BASE_DIR, 'bems.db')}"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
-# Upload configuration
+# Upload configuration (using /tmp for Vercel ephemeral storage)
 UPLOAD_FOLDER = '/tmp/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
-# Create folders
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, 'backups'), exist_ok=True)
 
 db = SQLAlchemy(app)
 
@@ -208,47 +200,9 @@ def create_default_data():
         print(f"✅ Created {len(default_depts)} default departments")
     print("=" * 50)
 
-# ===== BACKUP SYSTEM =====
-
-BACKUP_FOLDER = os.path.join(BASE_DIR, 'backups')
-
-def create_backup():
-    try:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_filename = f"bems_backup_{timestamp}.db"
-        backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
-        if os.path.exists(os.path.join(BASE_DIR, 'bems.db')):
-            shutil.copy2(os.path.join(BASE_DIR, 'bems.db'), backup_path)
-            return backup_filename
-        return None
-    except Exception as e:
-        print(f"Backup failed: {e}")
-        return None
-
-def cleanup_old_backups(days_to_keep=30):
-    try:
-        cutoff_date = datetime.now() - timedelta(days=days_to_keep)
-        for backup_file in glob.glob(os.path.join(BACKUP_FOLDER, 'bems_backup_*.db')):
-            filename = os.path.basename(backup_file)
-            timestamp_str = filename.replace('bems_backup_', '').replace('.db', '')
-            backup_date = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
-            if backup_date < cutoff_date:
-                os.remove(backup_file)
-    except Exception:
-        pass
-
-def run_scheduled_backups():
-    schedule.every().day.at("02:00").do(create_backup)
-    schedule.every().sunday.at("03:00").do(cleanup_old_backups)
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-if __name__ == '__main__':
-    backup_thread = threading.Thread(target=run_scheduled_backups, daemon=True)
-    backup_thread.start()
-
 # ===== HELPER FUNCTIONS =====
+
+ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -477,33 +431,17 @@ def logout():
 @app.route('/settings')
 @login_required
 def settings():
-    db_size_mb = 0
-    db_file_path = os.path.join(BASE_DIR, 'bems.db')
-    if os.path.exists(db_file_path):
-        db_size_mb = os.path.getsize(db_file_path) / (1024 * 1024)
-    
-    last_backup = None
-    backups = sorted(glob.glob(os.path.join(BACKUP_FOLDER, 'bems_backup_*.db')), reverse=True)
-    if backups:
-        last_backup_filename = os.path.basename(backups[0])
-        try:
-            timestamp_str = last_backup_filename.replace('bems_backup_', '').replace('.db', '')
-            last_backup = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
-        except:
-            last_backup = last_backup_filename
-    
+    # Database size and backups are handled natively by Supabase in serverless deployments
     total_equipment = Equipment.query.count()
     total_users = User.query.count()
-    total_backups = len(backups)
-    storage_path = os.path.abspath(os.path.dirname(__file__))
     
     return render_template('settings.html', 
-                         db_size_mb=round(db_size_mb, 2),
-                         last_backup=last_backup,
+                         db_size_mb=0,
+                         last_backup="Handled by Supabase",
                          total_equipment=total_equipment,
                          total_users=total_users,
-                         total_backups=total_backups,
-                         storage_path=storage_path)
+                         total_backups=0,
+                         storage_path="Serverless (Ephemeral)")
 
 @app.route('/equipment_list')
 @login_required
@@ -1324,72 +1262,6 @@ def import_data():
             return render_template('import_export.html', error=f"Error reading file: {str(e)}")
     
     return render_template('import_export.html', departments=Department.query.all())
-
-@app.route('/backup/manual')
-@admin_required
-def manual_backup():
-    create_backup()
-    return redirect('/backup/manage')
-
-@app.route('/backup/download/<filename>')
-@admin_required
-def download_backup(filename):
-    if '..' in filename or '/' in filename:
-        return "Invalid filename", 400
-    filepath = os.path.join(BACKUP_FOLDER, filename)
-    if not os.path.exists(filepath):
-        return "Backup file not found", 404
-    return send_file(filepath, as_attachment=True, download_name=filename, mimetype='application/x-sqlite3')
-
-@app.route('/backup/restore/<filename>')
-@admin_required
-def restore_backup(filename):
-    if '..' in filename or '/' in filename:
-        return "Invalid filename", 400
-    backup_path = os.path.join(BACKUP_FOLDER, filename)
-    if not os.path.exists(backup_path):
-        return "Backup file not found", 404
-    try:
-        create_backup()
-        db.session.remove()
-        db.engine.dispose()
-        shutil.copy2(backup_path, os.path.join(BASE_DIR, 'bems.db'))
-        with app.app_context():
-            db.create_all()
-        return "<h1>✅ Database Restored Successfully!</h1><p>Redirecting...</p><script>setTimeout(function(){ window.location.href='/'; }, 3000);</script>"
-    except Exception as e:
-        return f"Restore failed: {str(e)}", 500
-
-@app.route('/backup/delete/<filename>')
-@admin_required
-def delete_backup(filename):
-    if '..' in filename or '/' in filename:
-        return "Invalid filename", 400
-    filepath = os.path.join(BACKUP_FOLDER, filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
-    return redirect('/backup/manage')
-
-@app.route('/backup/manage')
-@admin_required
-def manage_backups():
-    backups = []
-    for backup_file in sorted(glob.glob(os.path.join(BACKUP_FOLDER, 'bems_backup_*.db')), reverse=True):
-        filename = os.path.basename(backup_file)
-        try:
-            timestamp_str = filename.replace('bems_backup_', '').replace('.db', '')
-            backup_date = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
-            formatted_date = backup_date.strftime('%Y-%m-%d %H:%M:%S')
-        except:
-            formatted_date = "Unknown"
-        size_bytes = os.path.getsize(backup_file)
-        size_mb = size_bytes / (1024 * 1024)
-        backups.append({'filename': filename, 'date': formatted_date, 'size_mb': round(size_mb, 2)})
-    db_size_mb = 0
-    db_file_path = os.path.join(BASE_DIR, 'bems.db')
-    if os.path.exists(db_file_path):
-        db_size_mb = os.path.getsize(db_file_path) / (1024 * 1024)
-    return render_template('backup_manage.html', backups=backups, db_size_mb=round(db_size_mb, 2))
 
 # ===== RUN APP =====
 
