@@ -50,11 +50,6 @@
             Import/Export
         </a>
         {% if session.get('role') in ['admin', 'superadmin'] %}
-            <a href="/backup/manage" class="nav-item {% if request.endpoint == 'manage_backups' %}active{% endif %}">
-                Backup
-            </a>
-        {% endif %}
-        {% if session.get('role') in ['admin', 'superadmin'] %}
             <a href="/users" class="nav-item {% if request.endpoint == 'user_management' %}active{% endif %}">
                 Users
             </a>

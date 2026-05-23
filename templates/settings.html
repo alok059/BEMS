@@ -182,31 +182,7 @@
         <div class="card-header">
             <h3 class="card-title">🔄 Data Management</h3>
         </div>
-        
-        <div class="settings-item">
-            <div>
-                <div class="settings-label">Auto Backup</div>
-                <div class="settings-description">Automatically backup database daily at 2:00 AM</div>
-            </div>
-            <label class="toggle-switch">
-                <input type="checkbox" id="autoBackup" checked>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        
-        <div class="settings-item">
-            <div>
-                <div class="settings-label">Backup Retention</div>
-                <div class="settings-description">How many days to keep old backups</div>
-            </div>
-            <select id="backupRetention" class="form-control" style="width: 100px;">
-                <option value="7">7 days</option>
-                <option value="30" selected>30 days</option>
-                <option value="60">60 days</option>
-                <option value="90">90 days</option>
-            </select>
-        </div>
-        
+                
         <div class="settings-item">
             <div>
                 <div class="settings-label">Auto Cleanup</div>
@@ -293,22 +269,6 @@
         
         <div class="settings-item">
             <div>
-                <div class="settings-label">Last Backup</div>
-                <div class="settings-description">Most recent automatic or manual backup</div>
-            </div>
-            <div><strong>{{ last_backup or 'Never' }}</strong></div>
-        </div>
-        
-        <div class="settings-item">
-            <div>
-                <div class="settings-label">Total Backups</div>
-                <div class="settings-description">Number of backup files stored</div>
-            </div>
-            <div><strong>{{ total_backups or 0 }}</strong></div>
-        </div>
-        
-        <div class="settings-item">
-            <div>
                 <div class="settings-label">Total Equipment</div>
                 <div class="settings-description">Number of equipment records</div>
             </div>
@@ -364,7 +324,7 @@
         <div class="settings-item">
             <div>
                 <div class="settings-label">Export All Data</div>
-                <div class="settings-description">Export complete system data for backup</div>
+                <div class="settings-description">Export complete system data in Excel format</div>
             </div>
             <a href="/export/all" class="btn btn-secondary">📦 Export All Data</a>
         </div>
@@ -415,14 +375,6 @@
         const pmAlerts = localStorage.getItem('pmAlerts') !== 'false';
         document.getElementById('pmAlerts').checked = pmAlerts;
         
-        // Auto backup
-        const autoBackup = localStorage.getItem('autoBackup') !== 'false';
-        document.getElementById('autoBackup').checked = autoBackup;
-        
-        // Backup retention
-        const backupRetention = localStorage.getItem('backupRetention') || '30';
-        document.getElementById('backupRetention').value = backupRetention;
-        
         // Auto cleanup
         const autoCleanup = localStorage.getItem('autoCleanup') === 'true';
         document.getElementById('autoCleanup').checked = autoCleanup;
@@ -469,16 +421,6 @@
     
     document.getElementById('pmAlerts').addEventListener('change', function() {
         localStorage.setItem('pmAlerts', this.checked);
-    });
-    
-    document.getElementById('autoBackup').addEventListener('change', function() {
-        localStorage.setItem('autoBackup', this.checked);
-        showToast(this.checked ? 'Auto backup enabled' : 'Auto backup disabled', 'info');
-    });
-    
-    document.getElementById('backupRetention').addEventListener('change', function() {
-        localStorage.setItem('backupRetention', this.value);
-        showToast('Backup retention updated to ' + this.value + ' days', 'success');
     });
     
     document.getElementById('autoCleanup').addEventListener('change', function() {

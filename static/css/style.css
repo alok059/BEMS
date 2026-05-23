@@ -988,3 +988,20 @@ input:checked + .toggle-slider:before {
         width: 100%;
     }
 }
+.logout-btn {
+    display: block;
+    text-align: center;
+    padding: 8px 8px;
+    background: var(--primary);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.logout-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+

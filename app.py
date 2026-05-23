@@ -439,16 +439,14 @@ def logout():
 @app.route('/settings')
 @login_required
 def settings():
-    # Database size and backups are handled natively by Supabase in serverless deployments
+    # Database size is handled natively by Supabase in serverless deployments
     total_equipment = Equipment.query.count()
     total_users = User.query.count()
     
     return render_template('settings.html', 
                          db_size_mb=0,
-                         last_backup="Handled by Supabase",
                          total_equipment=total_equipment,
                          total_users=total_users,
-                         total_backups=0,
                          storage_path="Serverless (Ephemeral)")
 
 @app.route('/equipment_list')

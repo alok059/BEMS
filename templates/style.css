@@ -987,22 +987,6 @@ input:checked + .toggle-slider:before {
     text-transform: capitalize;
 }
 
-.logout-btn {
-    display: block;
-    text-align: center;
-    padding: 10px 16px;
-    background: var(--danger);
-    color: white;
-    text-decoration: none;
-    border-radius: 10px;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.logout-btn:hover {
-    background: #b91c1c;
-    transform: translateY(-2px);
-}
 
 /* Main Content Adjustment */
 .main-content {
