@@ -3,3 +3,4 @@ GEMINI.md
 __pycache__/*
 *.md
 *.pyc
+*.env
