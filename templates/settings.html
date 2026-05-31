@@ -293,8 +293,8 @@
     </div>
 </div>
 
-<!-- Danger Zone (Admin Only) -->
-{% if session.get('role') in ['admin', 'superadmin'] %}
+<!-- Danger Zone (Superadmin Only) -->
+{% if session.get('role') == 'superadmin' %}
 <div class="settings-section">
     <div class="settings-card" style="border-color: var(--danger);">
         <div class="card-header" style="border-bottom-color: var(--danger);">

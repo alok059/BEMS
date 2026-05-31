@@ -1269,6 +1269,48 @@ def import_data():
     
     return render_template('import_export.html', departments=Department.query.all())
 
+# ===== ADMIN ACTIONS =====
+
+@app.route('/admin/clear-all-data')
+@superadmin_required
+def clear_all_data():
+    try:
+        # Delete data from dependent tables first
+        Repair.query.delete()
+        Task.query.delete()
+        PreventiveMaintenance.query.delete()
+        Equipment.query.delete()
+        Department.query.delete()
+        
+        # Delete all users except superadmins
+        User.query.filter(User.role != SUPERADMIN_ROLE).delete()
+        
+        db.session.commit()
+        flash("All system data has been cleared successfully. Only superadmin accounts were retained.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error clearing data: {str(e)}", "danger")
+    
+    return redirect('/settings')
+
+@app.route('/admin/reset-system')
+@superadmin_required
+def reset_system():
+    try:
+        # Reset system keeping departments and admin users
+        Repair.query.delete()
+        Task.query.delete()
+        PreventiveMaintenance.query.delete()
+        Equipment.query.delete()
+        
+        db.session.commit()
+        flash("System reset successful. Equipment, tasks, and repairs have been cleared while maintaining system configuration.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error resetting system: {str(e)}", "danger")
+    
+    return redirect('/settings')
+
 # ===== RUN APP =====
 
 if __name__ == "__main__":

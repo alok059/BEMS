@@ -60,7 +60,7 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>ID</th>
+                <th>#</th>
                 <th>Name</th>
                 <th>Model</th>
                 <th>Company</th>
@@ -69,11 +69,12 @@
                 <th>Department</th>
                 <th>Status</th>
                 <th>Actions</th>
-            </thead>
+            </tr>
+        </thead>
         <tbody>
             {% for eq in equipments %}
             <tr class="clickable-row" data-href="/equipment/{{ eq.id }}">
-                <td style="font-weight: 600;">{{ eq.id }}</td>
+                <td style="font-weight: 600;">{{ loop.index }}</td>
                 <td>
                     <strong>{{ eq.name }}</strong>
                     {% if eq.quantity and eq.quantity > 1 %}
